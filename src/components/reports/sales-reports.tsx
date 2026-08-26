@@ -13,8 +13,9 @@ import {
 } from 'lucide-react';
 
 export function SalesReports() {
-  const { leads, users, exportCSV } = useLMS();
-  const [selectedAgentId, setSelectedAgentId] = useState<string>('ALL');
+  const { leads, users, exportCSV, currentUser } = useLMS();
+  const isSalesperson = currentUser?.role === 'salesperson';
+  const [selectedAgentId, setSelectedAgentId] = useState<string>(currentUser?.role === 'salesperson' ? (currentUser?.id || 'ALL') : 'ALL');
 
   const activeLeads = leads.filter((l) => !l.isArchived);
 
