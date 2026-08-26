@@ -1,181 +1,418 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useLMS } from '@/lib/store';
-import { Download, TrendingUp, Users, Target } from 'lucide-react';
+import { 
+  Download, 
+  Users, 
+  Target, 
+  Award,
+  Filter,
+  BarChart2,
+  PieChart
+} from 'lucide-react';
 
 export function SalesReports() {
   const { leads, users, exportCSV } = useLMS();
+  const [selectedAgentId, setSelectedAgentId] = useState<string>('ALL');
 
   const activeLeads = leads.filter((l) => !l.isArchived);
-  const total = activeLeads.length;
 
-  const newCount = activeLeads.filter((l) => l.status === 'New Lead').length;
-  const interestedCount = activeLeads.filter((l) => l.status === 'Interested').length;
-  const visitCount = activeLeads.filter((l) => l.status === 'Visit Done').length;
-  const junkCount = activeLeads.filter((l) => l.status === 'Junk').length;
+  // Filter by selected agent if not ALL
+  const filteredLeads = selectedAgentId === 'ALL' 
+    ? activeLeads 
+    : activeLeads.filter(l => l.assignedTo === selectedAgentId);
+
+  const total = filteredLeads.length;
+  const newCount = filteredLeads.filter((l) => l.status === 'New Lead').length;
+  const interestedCount = filteredLeads.filter((l) => l.status === 'Interested').length;
+  const visitCount = filteredLeads.filter((l) => l.status === 'Visit Done').length;
+  const notPickedCount = filteredLeads.filter((l) => l.status === 'Not Picked').length;
+  const junkCount = filteredLeads.filter((l) => l.status === 'Junk').length;
+
+  const contactedCount = total - newCount - junkCount;
+  const qualifiedCount = interestedCount + visitCount;
 
   // Source breakdown
   const sourceMap: Record<string, number> = {};
-  activeLeads.forEach((l) => {
+  filteredLeads.forEach((l) => {
     sourceMap[l.source] = (sourceMap[l.source] || 0) + 1;
   });
 
-  // Salesperson stats
-  const salesStats = users
-    .filter((u) => u.role === 'salesperson')
-    .map((sp) => {
-      const assigned = activeLeads.filter((l) => l.assignedTo === sp.id);
-      const visits = assigned.filter((l) => l.status === 'Visit Done').length;
-      const interested = assigned.filter((l) => l.status === 'Interested').length;
-      const rate = assigned.length > 0 ? Math.round(((visits + interested) / assigned.length) * 100) : 0;
-      let callsLogged = 0;
-      assigned.forEach((l) => {
-        callsLogged += l.timeline.filter((a) => a.type === 'Call' && a.userId === sp.id).length;
-      });
+  const sourceColors: Record<string, string> = {
+    'Meta Ads (FB/IG)': '#3b82f6',
+    'Google Search': '#10b981',
+    'WhatsApp Direct': '#22c55e',
+    'Website Direct': '#8b5cf6',
+    'Referral / Broker': '#f59e0b',
+    'Direct Walk-in': '#ec4899',
+    'Cold Calling': '#64748b'
+  };
 
-      return {
-        user: sp,
-        assignedCount: assigned.length,
-        callsLogged,
-        visits,
-        interested,
-        conversionRate: rate
-      };
-    });
-
-  const funnelSteps = [
-    { label: 'Inquiries Captured', count: total, color: 'bg-blue-600' },
-    { label: 'Engaged / Contacted', count: total - newCount - junkCount, color: 'bg-cyan-600' },
-    { label: 'Qualified Interested', count: interestedCount + visitCount, color: 'bg-emerald-600' },
-    { label: 'Site Visits Done', count: visitCount, color: 'bg-purple-600' }
+  // Funnel Stage Data
+  const funnelStages = [
+    {
+      stage: '1. Inquiries Captured',
+      count: total,
+      pct: 100,
+      gradient: 'from-blue-600 to-indigo-600',
+      bgLight: 'bg-blue-50',
+      textColor: 'text-blue-700',
+      borderColor: 'border-blue-200',
+      desc: 'Total leads captured in pipeline'
+    },
+    {
+      stage: '2. Contacted / Engaged',
+      count: contactedCount > 0 ? contactedCount : 0,
+      pct: total > 0 ? Math.round((contactedCount / total) * 100) : 0,
+      gradient: 'from-cyan-500 to-blue-600',
+      bgLight: 'bg-cyan-50',
+      textColor: 'text-cyan-700',
+      borderColor: 'border-cyan-200',
+      desc: 'Spoke on phone or WhatsApp'
+    },
+    {
+      stage: '3. Qualified Interested',
+      count: qualifiedCount,
+      pct: total > 0 ? Math.round((qualifiedCount / total) * 100) : 0,
+      gradient: 'from-emerald-500 to-teal-600',
+      bgLight: 'bg-emerald-50',
+      textColor: 'text-emerald-700',
+      borderColor: 'border-emerald-200',
+      desc: 'Budget matched & requested brochures'
+    },
+    {
+      stage: '4. Site Visits Done',
+      count: visitCount,
+      pct: total > 0 ? Math.round((visitCount / total) * 100) : 0,
+      gradient: 'from-purple-600 to-pink-600',
+      bgLight: 'bg-purple-50',
+      textColor: 'text-purple-700',
+      borderColor: 'border-purple-200',
+      desc: 'Physically inspected the property'
+    }
   ];
 
+  // Salespersons list
+  const salesTeam = users.filter(u => u.role === 'salesperson' || u.role === 'admin');
+
+  // Calculate detailed individual stats
+  const selectedUser = users.find(u => u.id === selectedAgentId);
+  const totalCalls = filteredLeads.reduce((acc, l) => {
+    return acc + l.timeline.filter(a => a.type === 'Call').length;
+  }, 0);
+
+  const conversionRate = total > 0 ? Math.round((qualifiedCount / total) * 100) : 0;
+
   return (
-    <div className="space-y-4">
-      {/* Header with Export Button */}
-      <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs flex items-center justify-between flex-wrap gap-3">
+    <div className="space-y-5">
+      {/* Header & Controls Bar */}
+      <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h3 className="font-bold text-slate-900 text-base mb-0.5">Sales Conversion & Team Reports</h3>
-          <p className="text-xs text-slate-500">Pipeline conversion health, lead channels & salesperson rankings</p>
-        </div>
-        <button
-          onClick={exportCSV}
-          className="inline-flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold px-3.5 py-2 rounded-lg shadow-xs transition-all cursor-pointer"
-        >
-          <Download className="w-4 h-4" />
-          <span>Export Leads to CSV</span>
-        </button>
-      </div>
-
-      {/* Analytics Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Pipeline Funnel */}
-        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs space-y-3">
           <div className="flex items-center gap-2">
-            <Target className="w-4 h-4 text-blue-600" />
-            <h4 className="font-bold text-slate-900 text-sm">Lead Conversion Funnel</h4>
+            <BarChart2 className="w-5 h-5 text-blue-600" />
+            <h3 className="font-bold text-slate-900 text-base sm:text-lg">
+              Visual Sales Analytics & Conversion Funnel
+            </h3>
           </div>
-          <div className="space-y-3 pt-1">
-            {funnelSteps.map((step) => {
-              const pct = total > 0 ? Math.round((step.count / total) * 100) : 0;
-              return (
-                <div key={step.label} className="space-y-1">
-                  <div className="flex justify-between text-xs font-semibold text-slate-600">
-                    <span>{step.label}</span>
-                    <span>
-                      {step.count} ({pct}%)
-                    </span>
-                  </div>
-                  <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
-                    <div className={`h-full ${step.color} rounded-full transition-all duration-700`} style={{ width: `${pct}%` }} />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Interactive pipeline drop-offs, lead source attribution & salesperson drilldown
+          </p>
         </div>
 
-        {/* Source Channels */}
-        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs space-y-3">
-          <div className="flex items-center gap-2">
-            <TrendingUp className="w-4 h-4 text-emerald-600" />
-            <h4 className="font-bold text-slate-900 text-sm">Leads by Acquisition Channel</h4>
+        <div className="flex items-center gap-2.5">
+          {/* Agent Filter Selector */}
+          <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 shadow-xs">
+            <Filter className="w-3.5 h-3.5 text-slate-400" />
+            <select
+              value={selectedAgentId}
+              onChange={(e) => setSelectedAgentId(e.target.value)}
+              className="bg-transparent text-xs font-bold text-slate-800 focus:outline-none cursor-pointer"
+            >
+              <option value="ALL">🏢 Entire Company (All Team)</option>
+              {salesTeam.map((sp) => (
+                <option key={sp.id} value={sp.id}>
+                  👤 {sp.name}
+                </option>
+              ))}
+            </select>
           </div>
-          <div className="space-y-3 pt-1">
-            {Object.entries(sourceMap).map(([src, count]) => {
-              const pct = total > 0 ? Math.round((count / total) * 100) : 0;
-              return (
-                <div key={src} className="space-y-1">
-                  <div className="flex justify-between text-xs font-semibold text-slate-600">
-                    <span>{src}</span>
-                    <span>
-                      {count} leads ({pct}%)
-                    </span>
-                  </div>
-                  <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
-                    <div className="h-full bg-indigo-600 rounded-full transition-all duration-700" style={{ width: `${pct}%` }} />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+
+          {/* Export CSV */}
+          <button
+            onClick={exportCSV}
+            className="inline-flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow-xs transition-all cursor-pointer whitespace-nowrap"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>Export CSV</span>
+          </button>
         </div>
       </div>
 
-      {/* Salesperson Performance Leaderboard */}
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs">
-        <div className="p-4 border-b border-slate-200 flex items-center gap-2">
-          <Users className="w-4 h-4 text-purple-600" />
-          <h4 className="font-bold text-slate-900 text-sm">Sales Team Performance Leaderboard</h4>
+      {/* Individual Agent Performance Spotlight (When agent selected) */}
+      {selectedAgentId !== 'ALL' && selectedUser && (
+        <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl p-5 text-white shadow-lg shadow-blue-500/10 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <img
+                src={selectedUser.avatar}
+                alt={selectedUser.name}
+                className="w-12 h-12 rounded-2xl object-cover border-2 border-white/40 shadow-md"
+              />
+              <div>
+                <div className="flex items-center gap-2">
+                  <h4 className="text-lg font-black tracking-tight">{selectedUser.name}</h4>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-white/20 text-white uppercase">
+                    {selectedUser.role}
+                  </span>
+                </div>
+                <p className="text-xs text-blue-100">{selectedUser.email} &bull; {selectedUser.phone || 'Active'}</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md px-3.5 py-2 rounded-xl border border-white/20">
+              <Award className="w-5 h-5 text-amber-300" />
+              <div>
+                <span className="text-[10px] uppercase tracking-wider text-blue-200 block font-bold">Conversion Rate</span>
+                <span className="text-base font-black text-white">{conversionRate}%</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Key KPI Chips for this Agent */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-2">
+            <div className="bg-white/10 rounded-xl p-3 border border-white/10">
+              <span className="text-[10px] font-medium text-blue-200 block">Assigned Leads</span>
+              <span className="text-xl font-bold">{total}</span>
+            </div>
+            <div className="bg-white/10 rounded-xl p-3 border border-white/10">
+              <span className="text-[10px] font-medium text-blue-200 block">Calls Logged</span>
+              <span className="text-xl font-bold">{totalCalls}</span>
+            </div>
+            <div className="bg-white/10 rounded-xl p-3 border border-white/10">
+              <span className="text-[10px] font-medium text-blue-200 block">Site Visits Done</span>
+              <span className="text-xl font-bold text-amber-300">{visitCount}</span>
+            </div>
+            <div className="bg-white/10 rounded-xl p-3 border border-white/10">
+              <span className="text-[10px] font-medium text-blue-200 block">Qualified Interested</span>
+              <span className="text-xl font-bold text-emerald-300">{interestedCount}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Graphical Funnel & Channel Charts Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        {/* GRAPHICAL LEAD CONVERSION FUNNEL (7 Columns) */}
+        <div className="lg:col-span-7 bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-xs space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Target className="w-4 h-4 text-blue-600" />
+              <h4 className="font-bold text-slate-900 text-sm">
+                Visual Lead Conversion Funnel
+              </h4>
+            </div>
+            <span className="text-xs font-bold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full">
+              {total} Total Leads
+            </span>
+          </div>
+
+          {/* Visual Funnel Blocks */}
+          <div className="space-y-3 pt-2">
+            {funnelStages.map((stg, idx) => (
+              <div key={stg.stage} className="relative group">
+                <div className="flex items-center justify-between text-xs font-bold mb-1.5">
+                  <span className="text-slate-700 flex items-center gap-1.5">
+                    <span className="w-5 h-5 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center text-[10px] font-mono">
+                      #{idx + 1}
+                    </span>
+                    {stg.stage}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-slate-900 font-extrabold">{stg.count} leads</span>
+                    <span className={'px-2 py-0.5 rounded-full text-[10px] font-bold ' + stg.bgLight + ' ' + stg.textColor + ' border ' + stg.borderColor}>
+                      {stg.pct}%
+                    </span>
+                  </div>
+                </div>
+
+                {/* Funnel Tier Bar with Gradient and Depth */}
+                <div className="h-9 bg-slate-100 rounded-xl overflow-hidden p-1 flex items-center relative shadow-inner">
+                  <div
+                    className={'h-full bg-gradient-to-r ' + stg.gradient + ' rounded-lg transition-all duration-700 flex items-center justify-between px-3 text-white font-bold text-xs shadow-sm'}
+                    style={{ width: total > 0 ? Math.max(10, stg.pct) + '%' : '0%' }}
+                  >
+                    <span className="truncate text-[11px]">{stg.desc}</span>
+                    {stg.pct > 0 && <span className="text-[10px] font-black">{stg.pct}%</span>}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Funnel Stage Summary Cards */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-3 border-t border-slate-100">
+            <div className="bg-slate-50 p-2.5 rounded-xl text-center border border-slate-100">
+              <span className="text-[10px] font-bold text-slate-400 block uppercase">New Inquiries</span>
+              <span className="text-sm font-black text-blue-600">{newCount}</span>
+            </div>
+            <div className="bg-slate-50 p-2.5 rounded-xl text-center border border-slate-100">
+              <span className="text-[10px] font-bold text-slate-400 block uppercase">Not Picked</span>
+              <span className="text-sm font-black text-amber-600">{notPickedCount}</span>
+            </div>
+            <div className="bg-slate-50 p-2.5 rounded-xl text-center border border-slate-100">
+              <span className="text-[10px] font-bold text-slate-400 block uppercase">Interested</span>
+              <span className="text-sm font-black text-emerald-600">{interestedCount}</span>
+            </div>
+            <div className="bg-slate-50 p-2.5 rounded-xl text-center border border-slate-100">
+              <span className="text-[10px] font-bold text-slate-400 block uppercase">Site Visits</span>
+              <span className="text-sm font-black text-purple-600">{visitCount}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* GRAPHICAL ACQUISITION CHANNELS (5 Columns) */}
+        <div className="lg:col-span-5 bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-xs space-y-4 flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <PieChart className="w-4 h-4 text-emerald-600" />
+                <h4 className="font-bold text-slate-900 text-sm">Leads by Acquisition Channel</h4>
+              </div>
+              <span className="text-xs text-slate-400 font-semibold">{Object.keys(sourceMap).length} Channels</span>
+            </div>
+
+            {/* Visual Colored Channel Progress Bars */}
+            <div className="space-y-3 pt-1">
+              {Object.keys(sourceMap).length === 0 ? (
+                <div className="text-center py-8 text-slate-400 text-xs italic">
+                  No lead sources recorded yet. Register leads to see marketing source analytics!
+                </div>
+              ) : (
+                Object.entries(sourceMap).map(([src, count]) => {
+                  const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+                  const color = sourceColors[src] || '#6366f1';
+                  return (
+                    <div key={src} className="space-y-1">
+                      <div className="flex justify-between text-xs font-bold text-slate-700">
+                        <span className="flex items-center gap-1.5">
+                          <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
+                          {src}
+                        </span>
+                        <span className="text-slate-500">
+                          {count} ({pct}%)
+                        </span>
+                      </div>
+                      <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-all duration-700"
+                          style={{ width: pct + '%', backgroundColor: color }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
+          {/* Quick Marketing Insight Tip */}
+          <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 text-[11px] text-slate-600 flex items-start gap-2">
+            <span className="text-sm">💡</span>
+            <p>
+              Track which channel (Meta Ads vs Google vs Referrals) produces the highest number of <strong>Site Visits</strong> to optimize your ad spend.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* SALES TEAM PERFORMANCE LEADERBOARD TABLE */}
+      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
+        <div className="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Users className="w-4 h-4 text-purple-600" />
+            <h4 className="font-bold text-slate-900 text-sm sm:text-base">
+              Sales Team Performance Leaderboard
+            </h4>
+          </div>
+          <span className="text-xs text-slate-500 font-semibold">{salesTeam.length} Active Members</span>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[11px]">
-                <th className="py-3 px-4">Salesperson</th>
-                <th className="py-3 px-4">Assigned Leads</th>
-                <th className="py-3 px-4">Calls Logged</th>
-                <th className="py-3 px-4">Site Visits</th>
-                <th className="py-3 px-4">Interested Deals</th>
-                <th className="py-3 px-4">Conversion Rate</th>
+                <th className="py-3.5 px-4">Salesperson</th>
+                <th className="py-3.5 px-4">Assigned Leads</th>
+                <th className="py-3.5 px-4">Calls Logged</th>
+                <th className="py-3.5 px-4">Site Visits</th>
+                <th className="py-3.5 px-4">Interested Deals</th>
+                <th className="py-3.5 px-4">Conversion Rate</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {salesStats.map((stat) => (
-                <tr key={stat.user.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="py-3 px-4">
-                    <div className="flex items-center gap-2.5">
-                      <img src={stat.user.avatar} alt={stat.user.name} className="w-7 h-7 rounded-full object-cover border border-slate-200" />
-                      <div>
-                        <p className="font-bold text-slate-900">{stat.user.name}</p>
-                        <span className="text-[10px] text-slate-400">{stat.user.phone}</span>
+              {salesTeam.map((sp) => {
+                const assigned = activeLeads.filter(l => l.assignedTo === sp.id);
+                const visits = assigned.filter(l => l.status === 'Visit Done').length;
+                const interested = assigned.filter(l => l.status === 'Interested').length;
+                const rate = assigned.length > 0 ? Math.round(((visits + interested) / assigned.length) * 100) : 0;
+                let callsLogged = 0;
+                assigned.forEach(l => {
+                  callsLogged += l.timeline.filter(a => a.type === 'Call').length;
+                });
+
+                const isTopPerformer = rate >= 30 && assigned.length > 0;
+
+                return (
+                  <tr 
+                    key={sp.id} 
+                    onClick={() => setSelectedAgentId(sp.id)}
+                    className={'hover:bg-blue-50/40 transition-colors cursor-pointer ' + (selectedAgentId === sp.id ? 'bg-blue-50/70 font-semibold' : '')}
+                  >
+                    <td className="py-3.5 px-4">
+                      <div className="flex items-center gap-3">
+                        <img 
+                          src={sp.avatar} 
+                          alt={sp.name} 
+                          className="w-8 h-8 rounded-xl object-cover border border-slate-200 shadow-xs" 
+                        />
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <p className="font-bold text-slate-900">{sp.name}</p>
+                            {isTopPerformer && (
+                              <span className="text-amber-500 text-xs" title="Top Performer">⭐</span>
+                            )}
+                          </div>
+                          <span className="text-[10px] text-slate-400">{sp.email}</span>
+                        </div>
                       </div>
-                    </div>
-                  </td>
-                  <td className="py-3 px-4 font-bold text-slate-800">{stat.assignedCount}</td>
-                  <td className="py-3 px-4 text-slate-600">{stat.callsLogged}</td>
-                  <td className="py-3 px-4">
-                    <span className="px-2 py-0.5 rounded-full font-bold text-[10px] bg-purple-50 text-purple-700 border border-purple-200">
-                      {stat.visits} visits
-                    </span>
-                  </td>
-                  <td className="py-3 px-4">
-                    <span className="px-2 py-0.5 rounded-full font-bold text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200">
-                      {stat.interested} deals
-                    </span>
-                  </td>
-                  <td className="py-3 px-4">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-emerald-600">{stat.conversionRate}%</span>
-                      <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                        <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${stat.conversionRate}%` }} />
+                    </td>
+                    <td className="py-3.5 px-4 font-bold text-slate-800">{assigned.length} leads</td>
+                    <td className="py-3.5 px-4 text-slate-600">{callsLogged} calls</td>
+                    <td className="py-3.5 px-4">
+                      <span className="px-2.5 py-1 rounded-full font-bold text-[10px] bg-purple-50 text-purple-700 border border-purple-200">
+                        {visits} visits
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <span className="px-2.5 py-1 rounded-full font-bold text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        {interested} deals
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-emerald-600">{rate}%</span>
+                        <div className="w-16 h-2 bg-slate-100 rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-emerald-500 rounded-full transition-all duration-500" 
+                            style={{ width: rate + '%' }} 
+                          />
+                        </div>
                       </div>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
