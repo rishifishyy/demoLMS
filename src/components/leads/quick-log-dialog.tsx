@@ -3,53 +3,25 @@
 import React, { useState } from 'react';
 import { useLMS } from '@/lib/store';
 import { LeadStatus } from '@/lib/types';
-import { X, Check, Clock, MessageSquare, Calendar } from 'lucide-react';
+import { X, Check } from 'lucide-react';
+import { CustomDateTimePicker } from '@/components/ui/date-time-picker';
 
 export function QuickLogDialog() {
   const {
     quickLogLeadId,
     closeQuickLog,
     leads,
-    recordActivity,
-    currentUser
+    recordActivity
   } = useLMS();
 
   const [outcomeStatus, setOutcomeStatus] = useState<LeadStatus>('Interested');
   const [remark, setRemark] = useState('');
   const [nextFollowup, setNextFollowup] = useState('');
-  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
 
   if (!quickLogLeadId) return null;
 
   const lead = leads.find((l) => l.id === quickLogLeadId);
   if (!lead) return null;
-
-  const setPresetTime = (hoursFromNow: number, setHour?: number) => {
-    const d = new Date();
-    if (setHour !== undefined) {
-      d.setDate(d.getDate() + (hoursFromNow > 24 ? Math.floor(hoursFromNow / 24) : 0));
-      d.setHours(setHour, 0, 0, 0);
-    } else {
-      d.setHours(d.getHours() + hoursFromNow);
-    }
-    const localIso = new Date(d.getTime() - d.getTimezoneOffset() * 60000)
-      .toISOString()
-      .slice(0, 16);
-    setNextFollowup(localIso);
-    setIsDatePickerOpen(false);
-  };
-
-  const formatFollowupDisplay = (isoStr: string) => {
-    if (!isoStr) return null;
-    const d = new Date(isoStr);
-    return d.toLocaleString('en-IN', {
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
-    });
-  };
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
@@ -123,64 +95,12 @@ export function QuickLogDialog() {
             />
           </div>
 
-          {/* Quick DateTime Presets */}
-          <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                <Calendar className="w-3.5 h-3.5 text-blue-600" />
-                Schedule Next Action
-              </label>
-              {nextFollowup && (
-                <span className="text-[11px] font-bold text-blue-700 bg-blue-100/70 px-2 py-0.5 rounded">
-                  ⏰ {formatFollowupDisplay(nextFollowup)}
-                </span>
-              )}
-            </div>
-
-            <div className="flex flex-wrap gap-1.5">
-              <button
-                type="button"
-                onClick={() => setPresetTime(0, 17)}
-                className="px-2.5 py-1 rounded-lg bg-white hover:bg-blue-50 border border-slate-200 text-[11px] font-bold text-slate-700 hover:text-blue-600 cursor-pointer"
-              >
-                Today 5:00 PM
-              </button>
-              <button
-                type="button"
-                onClick={() => setPresetTime(24, 11)}
-                className="px-2.5 py-1 rounded-lg bg-white hover:bg-blue-50 border border-slate-200 text-[11px] font-bold text-slate-700 hover:text-blue-600 cursor-pointer"
-              >
-                Tomorrow 11:00 AM
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsDatePickerOpen(!isDatePickerOpen)}
-                className="px-2.5 py-1 rounded-lg bg-blue-600 text-white text-[11px] font-bold cursor-pointer flex items-center gap-1"
-              >
-                <Clock className="w-3 h-3" />
-                <span>{isDatePickerOpen ? 'Close' : 'Custom'}</span>
-              </button>
-            </div>
-
-            {isDatePickerOpen && (
-              <div className="bg-white border border-blue-200 rounded-lg p-2.5 flex items-center gap-2 mt-2">
-                <input
-                  type="datetime-local"
-                  value={nextFollowup}
-                  onChange={(e) => setNextFollowup(e.target.value)}
-                  className="flex-1 bg-slate-50 border border-slate-300 rounded px-2.5 py-1.5 text-xs text-slate-900"
-                />
-                <button
-                  type="button"
-                  onClick={() => setIsDatePickerOpen(false)}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded flex items-center gap-1 cursor-pointer"
-                >
-                  <Check className="w-3.5 h-3.5" />
-                  <span>Done</span>
-                </button>
-              </div>
-            )}
-          </div>
+          {/* In-App Custom Date & Time Picker */}
+          <CustomDateTimePicker
+            value={nextFollowup}
+            onChange={(val) => setNextFollowup(val)}
+            label="Schedule Next Follow-up Action"
+          />
 
           <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
             <button

@@ -3,7 +3,8 @@
 import React, { useState } from 'react';
 import { useLMS } from '@/lib/store';
 import { LeadStatus } from '@/lib/types';
-import { X, Plus, AlertCircle, Calendar, Check, Clock } from 'lucide-react';
+import { X, Plus, AlertCircle } from 'lucide-react';
+import { CustomDateTimePicker } from '@/components/ui/date-time-picker';
 
 export function NewLeadDialog() {
   const {
@@ -305,76 +306,11 @@ export function NewLeadDialog() {
             </div>
           </div>
 
-          {/* INTUITIVE DATE & TIME PICKER WITH 1-TAP PRESETS & DONE BUTTON */}
-          <div className="bg-slate-50/80 border border-slate-200 rounded-2xl p-3.5 space-y-2.5">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                <Calendar className="w-3.5 h-3.5 text-blue-600" />
-                Schedule Follow-up Call / Visit
-              </label>
-              {nextFollowup && (
-                <span className="text-[11px] font-bold text-blue-700 bg-blue-100/70 px-2.5 py-0.5 rounded-lg">
-                  ⏰ {formatFollowupDisplay(nextFollowup)}
-                </span>
-              )}
-            </div>
-
-            {/* Quick 1-Tap Presets */}
-            <div className="flex flex-wrap gap-1.5">
-              <button
-                type="button"
-                onClick={() => setPresetTime(0, 17)}
-                className="px-2.5 py-1.5 rounded-lg bg-white hover:bg-blue-50 border border-slate-200 text-[11px] font-bold text-slate-700 hover:text-blue-600 hover:border-blue-300 transition-all cursor-pointer shadow-2xs"
-              >
-                ⚡ Today 5:00 PM
-              </button>
-              <button
-                type="button"
-                onClick={() => setPresetTime(24, 11)}
-                className="px-2.5 py-1.5 rounded-lg bg-white hover:bg-blue-50 border border-slate-200 text-[11px] font-bold text-slate-700 hover:text-blue-600 hover:border-blue-300 transition-all cursor-pointer shadow-2xs"
-              >
-                ☀️ Tomorrow 11:00 AM
-              </button>
-              <button
-                type="button"
-                onClick={() => setPresetTime(48, 11)}
-                className="px-2.5 py-1.5 rounded-lg bg-white hover:bg-blue-50 border border-slate-200 text-[11px] font-bold text-slate-700 hover:text-blue-600 hover:border-blue-300 transition-all cursor-pointer shadow-2xs"
-              >
-                🗓️ In 2 Days
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsDatePickerOpen(!isDatePickerOpen)}
-                className="px-2.5 py-1.5 rounded-lg bg-blue-600 text-white text-[11px] font-bold transition-all cursor-pointer shadow-xs flex items-center gap-1"
-              >
-                <Clock className="w-3 h-3" />
-                <span>{isDatePickerOpen ? 'Close Custom' : 'Custom Date & Time'}</span>
-              </button>
-            </div>
-
-            {/* Custom Date & Time Picker with DONE Button */}
-            {isDatePickerOpen && (
-              <div className="bg-white border border-blue-200 rounded-xl p-3 space-y-2 mt-2 shadow-sm animate-in fade-in duration-200">
-                <label className="block text-[11px] font-bold text-slate-600">Select Exact Date & Time:</label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="datetime-local"
-                    value={nextFollowup}
-                    onChange={(e) => setNextFollowup(e.target.value)}
-                    className="flex-1 bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-900 font-medium focus:outline-none focus:border-blue-500 focus:bg-white"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setIsDatePickerOpen(false)}
-                    className="inline-flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2 rounded-lg shadow-xs transition-all cursor-pointer whitespace-nowrap"
-                  >
-                    <Check className="w-3.5 h-3.5" />
-                    <span>Done</span>
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
+          <CustomDateTimePicker
+            value={nextFollowup}
+            onChange={(val) => setNextFollowup(val)}
+            label="Schedule Follow-up Call / Site Visit"
+          />
 
           {/* Initial Discussion Remark */}
           <div>
