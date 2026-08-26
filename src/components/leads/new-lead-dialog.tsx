@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useLMS } from '@/lib/store';
 import { LeadStatus } from '@/lib/types';
-import { X, Plus, AlertCircle, Phone } from 'lucide-react';
+import { X, Plus, AlertCircle, Calendar, Check, Clock } from 'lucide-react';
 
 export function NewLeadDialog() {
   const {
@@ -24,6 +24,7 @@ export function NewLeadDialog() {
   const [assignedTo, setAssignedTo] = useState(currentUser?.id || '');
   const [status, setStatus] = useState<LeadStatus>('New Lead');
   const [nextFollowup, setNextFollowup] = useState('');
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [latestRemark, setLatestRemark] = useState('');
   const [error, setError] = useState('');
 
@@ -33,16 +34,42 @@ export function NewLeadDialog() {
 
   // Handle strictly numbers only for mobile inputs
   const handleMobileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value;
-    // Strip everything that is not a digit (0-9) and limit to 10 digits
-    const numericOnly = raw.replace(/\D/g, '').slice(0, 10);
+    const numericOnly = e.target.value.replace(/\D/g, '').slice(0, 10);
     setMobile(numericOnly);
   };
 
   const handleWhatsappChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value;
-    const numericOnly = raw.replace(/\D/g, '').slice(0, 10);
+    const numericOnly = e.target.value.replace(/\D/g, '').slice(0, 10);
     setWhatsapp(numericOnly);
+  };
+
+  // Quick DateTime preset helpers
+  const setPresetTime = (hoursFromNow: number, setHour?: number) => {
+    const d = new Date();
+    if (setHour !== undefined) {
+      d.setDate(d.getDate() + (hoursFromNow > 24 ? Math.floor(hoursFromNow / 24) : 0));
+      d.setHours(setHour, 0, 0, 0);
+    } else {
+      d.setHours(d.getHours() + hoursFromNow);
+    }
+    // Format YYYY-MM-DDTHH:MM for datetime-local input
+    const localIso = new Date(d.getTime() - d.getTimezoneOffset() * 60000)
+      .toISOString()
+      .slice(0, 16);
+    setNextFollowup(localIso);
+    setIsDatePickerOpen(false);
+  };
+
+  const formatFollowupDisplay = (isoStr: string) => {
+    if (!isoStr) return null;
+    const d = new Date(isoStr);
+    return d.toLocaleString('en-IN', {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -59,7 +86,6 @@ export function NewLeadDialog() {
       return;
     }
 
-    // Final source string: either chosen preset or uppercase custom source
     let finalSource = sourceType;
     if (sourceType === 'CUSTOM') {
       if (!customSource.trim()) {
@@ -75,7 +101,7 @@ export function NewLeadDialog() {
       whatsapp: whatsapp.trim() || mobile.trim(),
       projectId: projectId || 'a1b2c3d4-0001-4000-8000-000000000001',
       source: finalSource,
-      assignedTo: assignedTo || currentUser?.id || '',
+      assignedTo: isAdmin ? (assignedTo || currentUser?.id || '') : (currentUser?.id || ''),
       status,
       nextFollowup: nextFollowup ? new Date(nextFollowup).toISOString() : null,
       latestRemark: latestRemark.trim() || 'Inquiry registered into system'
@@ -98,27 +124,27 @@ export function NewLeadDialog() {
       {/* Backdrop */}
       <div
         onClick={closeNewLeadModal}
-        className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs transition-opacity"
+        className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity"
       />
 
       {/* Modal Card */}
-      <div className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden z-10 my-auto">
+      <div className="relative w-full max-w-lg bg-white rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200 overflow-hidden z-10 my-auto max-h-[92vh] flex flex-col">
         {/* Header */}
-        <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+        <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50 shrink-0">
           <div>
             <h3 className="font-bold text-slate-900 text-base sm:text-lg">Register New Lead</h3>
             <p className="text-xs text-slate-500">Add an interested property buyer into your CRM pipeline</p>
           </div>
           <button
             onClick={closeNewLeadModal}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-200 transition-colors cursor-pointer"
+            className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-200 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-4 sm:p-5 space-y-4">
+        {/* Scrollable Form Body */}
+        <form onSubmit={handleSubmit} className="p-4 sm:p-5 space-y-4 overflow-y-auto flex-1">
           {error && (
             <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl flex items-center gap-2 text-rose-700 text-xs font-semibold">
               <AlertCircle className="w-4 h-4 shrink-0" />
@@ -137,7 +163,7 @@ export function NewLeadDialog() {
               placeholder="e.g. Amit Sharma"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-blue-500 focus:bg-white transition-all font-medium"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-blue-500 focus:bg-white transition-all font-medium"
             />
           </div>
 
@@ -159,13 +185,13 @@ export function NewLeadDialog() {
                   placeholder="9876543210"
                   value={mobile}
                   onChange={handleMobileChange}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-11 pr-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-blue-500 focus:bg-white transition-all font-mono font-bold tracking-wider"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-11 pr-3 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-blue-500 focus:bg-white transition-all font-mono font-bold tracking-wider"
                 />
               </div>
               <p className="text-[10px] text-slate-400 mt-1">10 digits, strictly numeric</p>
             </div>
 
-            {/* WhatsApp Number (Optional, Numbers Only) */}
+            {/* WhatsApp Number (Optional) */}
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">
                 WhatsApp Number <span className="text-slate-400 font-normal">(Optional)</span>
@@ -181,7 +207,7 @@ export function NewLeadDialog() {
                   placeholder="Same as mobile"
                   value={whatsapp}
                   onChange={handleWhatsappChange}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-11 pr-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-emerald-500 focus:bg-white transition-all font-mono font-bold tracking-wider"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-11 pr-3 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-emerald-500 focus:bg-white transition-all font-mono font-bold tracking-wider"
                 />
               </div>
             </div>
@@ -189,7 +215,6 @@ export function NewLeadDialog() {
 
           {/* Interested Location & Lead Source */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {/* Properties: MODINAGAR, MURADNAGAR, MEERUT */}
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">
                 Interested Property Location <span className="text-rose-500">*</span>
@@ -197,7 +222,7 @@ export function NewLeadDialog() {
               <select
                 value={projectId}
                 onChange={(e) => setProjectId(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:outline-none focus:border-blue-500 cursor-pointer"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-800 focus:outline-none focus:border-blue-500 cursor-pointer"
               >
                 <option value="a1b2c3d4-0001-4000-8000-000000000001">📍 MODINAGAR</option>
                 <option value="a1b2c3d4-0002-4000-8000-000000000002">📍 MURADNAGAR</option>
@@ -205,7 +230,6 @@ export function NewLeadDialog() {
               </select>
             </div>
 
-            {/* Lead Source: REFERRAL, WHATSAPP, INSTAGRAM, CUSTOM */}
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">
                 Lead Source <span className="text-rose-500">*</span>
@@ -213,7 +237,7 @@ export function NewLeadDialog() {
               <select
                 value={sourceType}
                 onChange={(e) => setSourceType(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:outline-none focus:border-blue-500 cursor-pointer"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-800 focus:outline-none focus:border-blue-500 cursor-pointer"
               >
                 <option value="WHATSAPP">💬 WHATSAPP</option>
                 <option value="INSTAGRAM">📸 INSTAGRAM</option>
@@ -223,11 +247,11 @@ export function NewLeadDialog() {
             </div>
           </div>
 
-          {/* If Custom Source Selected: Force Capital Letters */}
+          {/* Custom Source Input */}
           {sourceType === 'CUSTOM' && (
             <div className="bg-blue-50/70 border border-blue-200 rounded-xl p-3 space-y-1">
               <label className="block text-[11px] font-bold text-blue-900">
-                Custom Source Name (Auto-Capitalized for easy filtering)
+                Custom Source Name (Auto-Capitalized)
               </label>
               <input
                 type="text"
@@ -235,7 +259,7 @@ export function NewLeadDialog() {
                 placeholder="e.g. FACEBOOK ADS, HOARDING, COLD CALL"
                 value={customSource}
                 onChange={(e) => setCustomSource(e.target.value.toUpperCase())}
-                className="w-full bg-white border border-blue-300 rounded-lg px-3 py-1.5 text-xs text-blue-900 placeholder:text-blue-300 focus:outline-none focus:border-blue-600 font-bold uppercase"
+                className="w-full bg-white border border-blue-300 rounded-lg px-3 py-2 text-xs text-blue-900 placeholder:text-blue-300 focus:outline-none focus:border-blue-600 font-bold uppercase"
               />
             </div>
           )}
@@ -244,13 +268,13 @@ export function NewLeadDialog() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">
-                Assign to Agent {!isAdmin && <span className="text-slate-400 font-normal">(Auto-assigned to you)</span>}
+                Assign to Agent {!isAdmin && <span className="text-slate-400 font-normal">(Auto-assigned)</span>}
               </label>
               <select
                 value={isAdmin ? assignedTo : (currentUser?.id || '')}
                 disabled={!isAdmin}
                 onChange={(e) => setAssignedTo(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium text-slate-800 focus:outline-none focus:border-blue-500 cursor-pointer disabled:opacity-60"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-medium text-slate-800 focus:outline-none focus:border-blue-500 cursor-pointer disabled:opacity-60"
               >
                 {isAdmin ? (
                   users.map((u) => (
@@ -269,7 +293,7 @@ export function NewLeadDialog() {
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value as LeadStatus)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:outline-none focus:border-blue-500 cursor-pointer"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-800 focus:outline-none focus:border-blue-500 cursor-pointer"
               >
                 <option value="New Lead">New Lead</option>
                 <option value="Interested">Interested</option>
@@ -281,17 +305,75 @@ export function NewLeadDialog() {
             </div>
           </div>
 
-          {/* First Scheduled Follow-up */}
-          <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">
-              Schedule First Follow-up <span className="text-slate-400 font-normal">(Optional)</span>
-            </label>
-            <input
-              type="datetime-local"
-              value={nextFollowup}
-              onChange={(e) => setNextFollowup(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-blue-500 font-medium cursor-pointer"
-            />
+          {/* INTUITIVE DATE & TIME PICKER WITH 1-TAP PRESETS & DONE BUTTON */}
+          <div className="bg-slate-50/80 border border-slate-200 rounded-2xl p-3.5 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                <Calendar className="w-3.5 h-3.5 text-blue-600" />
+                Schedule Follow-up Call / Visit
+              </label>
+              {nextFollowup && (
+                <span className="text-[11px] font-bold text-blue-700 bg-blue-100/70 px-2.5 py-0.5 rounded-lg">
+                  ⏰ {formatFollowupDisplay(nextFollowup)}
+                </span>
+              )}
+            </div>
+
+            {/* Quick 1-Tap Presets */}
+            <div className="flex flex-wrap gap-1.5">
+              <button
+                type="button"
+                onClick={() => setPresetTime(0, 17)}
+                className="px-2.5 py-1.5 rounded-lg bg-white hover:bg-blue-50 border border-slate-200 text-[11px] font-bold text-slate-700 hover:text-blue-600 hover:border-blue-300 transition-all cursor-pointer shadow-2xs"
+              >
+                ⚡ Today 5:00 PM
+              </button>
+              <button
+                type="button"
+                onClick={() => setPresetTime(24, 11)}
+                className="px-2.5 py-1.5 rounded-lg bg-white hover:bg-blue-50 border border-slate-200 text-[11px] font-bold text-slate-700 hover:text-blue-600 hover:border-blue-300 transition-all cursor-pointer shadow-2xs"
+              >
+                ☀️ Tomorrow 11:00 AM
+              </button>
+              <button
+                type="button"
+                onClick={() => setPresetTime(48, 11)}
+                className="px-2.5 py-1.5 rounded-lg bg-white hover:bg-blue-50 border border-slate-200 text-[11px] font-bold text-slate-700 hover:text-blue-600 hover:border-blue-300 transition-all cursor-pointer shadow-2xs"
+              >
+                🗓️ In 2 Days
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsDatePickerOpen(!isDatePickerOpen)}
+                className="px-2.5 py-1.5 rounded-lg bg-blue-600 text-white text-[11px] font-bold transition-all cursor-pointer shadow-xs flex items-center gap-1"
+              >
+                <Clock className="w-3 h-3" />
+                <span>{isDatePickerOpen ? 'Close Custom' : 'Custom Date & Time'}</span>
+              </button>
+            </div>
+
+            {/* Custom Date & Time Picker with DONE Button */}
+            {isDatePickerOpen && (
+              <div className="bg-white border border-blue-200 rounded-xl p-3 space-y-2 mt-2 shadow-sm animate-in fade-in duration-200">
+                <label className="block text-[11px] font-bold text-slate-600">Select Exact Date & Time:</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="datetime-local"
+                    value={nextFollowup}
+                    onChange={(e) => setNextFollowup(e.target.value)}
+                    className="flex-1 bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-900 font-medium focus:outline-none focus:border-blue-500 focus:bg-white"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setIsDatePickerOpen(false)}
+                    className="inline-flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2 rounded-lg shadow-xs transition-all cursor-pointer whitespace-nowrap"
+                  >
+                    <Check className="w-3.5 h-3.5" />
+                    <span>Done</span>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Initial Discussion Remark */}
@@ -306,8 +388,8 @@ export function NewLeadDialog() {
             />
           </div>
 
-          {/* Buttons */}
-          <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+          {/* Submit Action Buttons */}
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 shrink-0">
             <button
               type="button"
               onClick={closeNewLeadModal}
