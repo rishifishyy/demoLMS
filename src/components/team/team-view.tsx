@@ -93,7 +93,7 @@ export function TeamManagementView() {
           const { error: updateErr } = await supabase
             .from('profiles')
             .update({
-              name: name.trim(),
+              full_name: name.trim(),
               phone: phone.trim() || null,
               role: role
             })
@@ -129,7 +129,7 @@ export function TeamManagementView() {
           if (authData?.user) {
             await supabase.from('profiles').upsert({
               id: authData.user.id,
-              name: name.trim(),
+              full_name: name.trim(),
               email: email.trim(),
               role: role,
               phone: phone.trim() || null,
