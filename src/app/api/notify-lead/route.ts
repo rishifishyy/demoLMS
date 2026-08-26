@@ -1,19 +1,10 @@
 import { NextResponse } from 'next/server';
+import nodemailer from 'nodemailer';
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
     const { agentEmail, agentName, customerName, customerPhone, propertyLocation, leadSource, remark, leadId } = body;
-
-    const resendApiKey = process.env.RESEND_API_KEY;
-
-    if (!resendApiKey) {
-      console.warn('RESEND_API_KEY not configured');
-      return NextResponse.json({ 
-        success: false, 
-        error: 'RESEND_API_KEY is not configured in Vercel Environment Variables' 
-      }, { status: 400 });
-    }
 
     const emailHtml = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
@@ -75,34 +66,60 @@ export async function POST(request: Request) {
       </div>
     `;
 
-    const res = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${resendApiKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        from: 'HappyLMS Leads <onboarding@resend.dev>',
-        to: [agentEmail],
+    const gmailUser = process.env.GMAIL_USER;
+    const gmailPass = process.env.GMAIL_APP_PASSWORD;
+    const resendApiKey = process.env.RESEND_API_KEY;
+
+    // 1. Preferred Method: Direct Gmail SMTP (Works to ANY Gmail with ZERO sandbox restrictions!)
+    if (gmailUser && gmailPass) {
+      const transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+          user: gmailUser,
+          pass: gmailPass
+        }
+      });
+
+      await transporter.sendMail({
+        from: `"HappyLMS CRM" <${gmailUser}>`,
+        to: agentEmail,
         subject: `⚡ New Lead: ${customerName} (${propertyLocation})`,
         html: emailHtml
-      })
-    });
+      });
 
-    const data = await res.json();
-    console.log('Resend Email Response:', data);
-
-    if (!res.ok) {
-      return NextResponse.json({ 
-        success: false, 
-        error: data.message || 'Resend returned an error', 
-        data 
-      }, { status: res.status });
+      return NextResponse.json({ success: true, method: 'gmail_smtp' });
     }
 
-    return NextResponse.json({ success: true, data });
+    // 2. Fallback: Resend API
+    if (resendApiKey) {
+      const res = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${resendApiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          from: 'HappyLMS Leads <onboarding@resend.dev>',
+          to: [agentEmail],
+          subject: `⚡ New Lead: ${customerName} (${propertyLocation})`,
+          html: emailHtml
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        return NextResponse.json({ success: false, error: data.message || 'Resend error', data }, { status: res.status });
+      }
+      return NextResponse.json({ success: true, method: 'resend', data });
+    }
+
+    return NextResponse.json({ 
+      success: false, 
+      error: 'Neither GMAIL_APP_PASSWORD nor RESEND_API_KEY is configured' 
+    }, { status: 400 });
+
   } catch (err: any) {
-    console.error('Email API route error:', err);
+    console.error('Email sending error:', err);
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });
   }
 }

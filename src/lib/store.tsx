@@ -332,11 +332,13 @@ export function LMSProvider({ children }: { children: React.ReactNode }) {
 
     setLeads((prev) => [newLead, ...prev]);
 
-    // Send notification email to assigned agent
+        // Send notification email ONLY if assigned to another team member (never to oneself)
     try {
+      const isAssignedToSelf = leadData.assignedTo === currentUser?.id;
       const assignedUser = users.find((u) => u.id === leadData.assignedTo);
       const proj = projects.find((p) => p.id === leadData.projectId);
-      if (assignedUser?.email) {
+
+      if (!isAssignedToSelf && assignedUser?.email) {
         fetch('/api/notify-lead', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -350,7 +352,9 @@ export function LMSProvider({ children }: { children: React.ReactNode }) {
             remark: leadData.latestRemark,
             leadId: newId
           })
-        }).catch(() => {});
+        }).then(r => r.json()).then(res => {
+          console.log('Lead assignment email response:', res);
+        }).catch((e) => console.warn('Email trigger notice:', e));
       }
     } catch (_) {}
 
