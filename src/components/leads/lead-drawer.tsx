@@ -195,17 +195,17 @@ export function LeadDrawer() {
             </div>
           )}
 
-          {/* 1-Tap Share Lead to Agent via WhatsApp */}
+                    {/* 1-Tap Share Lead to Agent via WhatsApp */}
           {isAdmin && assignee && (
             <a
-              href={`https://wa.me/?text=${encodeURIComponent(
+              href={`https://wa.me/${assignee.phone ? ('91' + assignee.phone.replace(/\D/g, '').slice(-10)) : ''}?text=${encodeURIComponent(
                 `⚡ *NEW LEAD ASSIGNED TO YOU*\n\n👤 *Customer:* ${lead.name}\n📱 *Mobile:* +91 ${lead.mobile}\n📍 *Location:* ${project?.name || 'Property'}\n🏷️ *Source:* ${lead.source}\n📝 *Notes:* ${lead.latestRemark || 'New inquiry'}\n\n🔗 *Open CRM:* https://happy-lms.vercel.app`
               )}`}
               target="_blank"
               rel="noreferrer"
               className="flex items-center justify-center gap-2 w-full py-2.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 font-bold text-xs rounded-xl transition-all cursor-pointer"
             >
-              <span>📲 Notify {assignee.name.split(' ')[0]} on WhatsApp</span>
+              <span>📲 Notify {assignee.name.split(' ')[0]} on WhatsApp {assignee.phone ? `(+91 ${assignee.phone})` : ''}</span>
             </a>
           )}
 
