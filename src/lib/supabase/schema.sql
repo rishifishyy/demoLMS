@@ -76,6 +76,12 @@ ALTER TABLE public.activities ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Public profiles are viewable by authenticated users" 
 ON public.profiles FOR SELECT TO authenticated USING (true);
 
+CREATE POLICY "Profiles insertable by authenticated users" 
+ON public.profiles FOR INSERT TO authenticated WITH CHECK (true);
+
+CREATE POLICY "Profiles updatable by authenticated users" 
+ON public.profiles FOR UPDATE TO authenticated USING (true);
+
 -- Projects: All authenticated users can view properties
 CREATE POLICY "Projects viewable by authenticated users" 
 ON public.projects FOR SELECT TO authenticated USING (true);
