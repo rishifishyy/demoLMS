@@ -7,39 +7,25 @@ import { getFollowupCategory } from './utils';
 
 export const INITIAL_PROJECTS: Project[] = [
   {
-    id: 'a1b2c3d4-0001-4000-8000-000000000001',
-    name: 'Greenfield Meadows',
-    location: 'Sector 84, Gurugram',
-    type: 'Luxury Plots & Villas',
-    priceRange: '₹1.25 Cr - ₹3.5 Cr'
+    id: 'proj-modinagar',
+    name: 'MODINAGAR',
+    location: 'Modinagar, Uttar Pradesh',
+    type: 'Plots, Commercial & Residential',
+    priceRange: '₹35 Lakh - ₹1.5 Cr'
   },
   {
-    id: 'a1b2c3d4-0002-4000-8000-000000000002',
-    name: 'Skyline Heights',
-    location: 'Whitefield, Bengaluru',
-    type: '3 & 4 BHK Luxury Condos',
-    priceRange: '₹1.80 Cr - ₹2.90 Cr'
+    id: 'proj-muradnagar',
+    name: 'MURADNAGAR',
+    location: 'Muradnagar, Uttar Pradesh',
+    type: 'Highway Plots & Township',
+    priceRange: '₹45 Lakh - ₹2.2 Cr'
   },
   {
-    id: 'a1b2c3d4-0003-4000-8000-000000000003',
-    name: 'Godrej Palm Grove',
-    location: 'Kandivali East, Mumbai',
-    type: '2 & 3 BHK Premium Apartments',
-    priceRange: '₹2.10 Cr - ₹4.20 Cr'
-  },
-  {
-    id: 'a1b2c3d4-0004-4000-8000-000000000004',
-    name: 'CyberTech Business Hub',
-    location: 'HITEC City, Hyderabad',
-    type: 'Commercial Office Spaces',
-    priceRange: '₹85 Lakh - ₹5.0 Cr'
-  },
-  {
-    id: 'a1b2c3d4-0005-4000-8000-000000000005',
-    name: 'Serene Riverside',
-    location: 'Wakad, Pune',
-    type: 'Townhouses & 3 BHKs',
-    priceRange: '₹95 Lakh - ₹1.65 Cr'
+    id: 'proj-meerut',
+    name: 'MEERUT',
+    location: 'Meerut City & Bypass',
+    type: 'Luxury Villas & Residential Flats',
+    priceRange: '₹55 Lakh - ₹3.5 Cr'
   }
 ];
 
@@ -226,7 +212,7 @@ export function LMSProvider({ children }: { children: React.ReactNode }) {
               name: cl.name,
               mobile: cl.mobile,
               whatsapp: cl.whatsapp || cl.mobile,
-              projectId: cl.project_id || 'a1b2c3d4-0001-4000-8000-000000000001',
+              projectId: cl.project_id || 'proj-modinagar',
               source: cl.source,
               assignedTo: cl.assigned_to || '',
               status: cl.status,
