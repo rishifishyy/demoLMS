@@ -36,7 +36,7 @@ export default function LoginPage() {
         // Forgot Password Flow
         if (isSupabaseConfigured) {
           const { error: resetErr } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-            redirectTo: typeof window !== 'undefined' ? window.location.origin + '/login' : undefined
+            redirectTo: typeof window !== 'undefined' ? window.location.origin + '/reset-password' : undefined
           });
           if (resetErr) {
             setError(resetErr.message);
