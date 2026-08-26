@@ -18,7 +18,7 @@ export function NewLeadDialog() {
   const [name, setName] = useState('');
   const [mobile, setMobile] = useState('');
   const [whatsapp, setWhatsapp] = useState('');
-  const [projectId, setProjectId] = useState('proj-modinagar');
+  const [projectId, setProjectId] = useState('a1b2c3d4-0001-4000-8000-000000000001');
   const [sourceType, setSourceType] = useState('WHATSAPP');
   const [customSource, setCustomSource] = useState('');
   const [assignedTo, setAssignedTo] = useState(currentUser?.id || '');
@@ -73,7 +73,7 @@ export function NewLeadDialog() {
       name: name.trim(),
       mobile: mobile.trim(),
       whatsapp: whatsapp.trim() || mobile.trim(),
-      projectId: projectId || 'proj-modinagar',
+      projectId: projectId || 'a1b2c3d4-0001-4000-8000-000000000001',
       source: finalSource,
       assignedTo: assignedTo || currentUser?.id || '',
       status,
@@ -85,7 +85,7 @@ export function NewLeadDialog() {
     setName('');
     setMobile('');
     setWhatsapp('');
-    setProjectId('proj-modinagar');
+    setProjectId('a1b2c3d4-0001-4000-8000-000000000001');
     setSourceType('WHATSAPP');
     setCustomSource('');
     setLatestRemark('');
@@ -199,9 +199,9 @@ export function NewLeadDialog() {
                 onChange={(e) => setProjectId(e.target.value)}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:outline-none focus:border-blue-500 cursor-pointer"
               >
-                <option value="proj-modinagar">📍 MODINAGAR</option>
-                <option value="proj-muradnagar">📍 MURADNAGAR</option>
-                <option value="proj-meerut">📍 MEERUT</option>
+                <option value="a1b2c3d4-0001-4000-8000-000000000001">📍 MODINAGAR</option>
+                <option value="a1b2c3d4-0002-4000-8000-000000000002">📍 MURADNAGAR</option>
+                <option value="a1b2c3d4-0003-4000-8000-000000000003">📍 MEERUT</option>
               </select>
             </div>
 

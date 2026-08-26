@@ -7,21 +7,21 @@ import { getFollowupCategory } from './utils';
 
 export const INITIAL_PROJECTS: Project[] = [
   {
-    id: 'proj-modinagar',
+    id: 'a1b2c3d4-0001-4000-8000-000000000001',
     name: 'MODINAGAR',
     location: 'Modinagar, Uttar Pradesh',
     type: 'Plots, Commercial & Residential',
     priceRange: '₹35 Lakh - ₹1.5 Cr'
   },
   {
-    id: 'proj-muradnagar',
+    id: 'a1b2c3d4-0002-4000-8000-000000000002',
     name: 'MURADNAGAR',
     location: 'Muradnagar, Uttar Pradesh',
     type: 'Highway Plots & Township',
     priceRange: '₹45 Lakh - ₹2.2 Cr'
   },
   {
-    id: 'proj-meerut',
+    id: 'a1b2c3d4-0003-4000-8000-000000000003',
     name: 'MEERUT',
     location: 'Meerut City & Bypass',
     type: 'Luxury Villas & Residential Flats',
@@ -212,7 +212,7 @@ export function LMSProvider({ children }: { children: React.ReactNode }) {
               name: cl.name,
               mobile: cl.mobile,
               whatsapp: cl.whatsapp || cl.mobile,
-              projectId: cl.project_id || 'proj-modinagar',
+              projectId: cl.project_id || 'a1b2c3d4-0001-4000-8000-000000000001',
               source: cl.source,
               assignedTo: cl.assigned_to || '',
               status: cl.status,
