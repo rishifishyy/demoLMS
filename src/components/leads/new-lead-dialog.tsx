@@ -243,18 +243,24 @@ export function NewLeadDialog() {
           {/* Assignee & Initial Status */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">Assign to Agent</label>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                Assign to Agent {!isAdmin && <span className="text-slate-400 font-normal">(Auto-assigned to you)</span>}
+              </label>
               <select
-                value={assignedTo}
+                value={isAdmin ? assignedTo : (currentUser?.id || '')}
                 disabled={!isAdmin}
                 onChange={(e) => setAssignedTo(e.target.value)}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium text-slate-800 focus:outline-none focus:border-blue-500 cursor-pointer disabled:opacity-60"
               >
-                {users.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.name}
-                  </option>
-                ))}
+                {isAdmin ? (
+                  users.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.name}
+                    </option>
+                  ))
+                ) : (
+                  <option value={currentUser?.id || ''}>{currentUser?.name || 'You'}</option>
+                )}
               </select>
             </div>
 

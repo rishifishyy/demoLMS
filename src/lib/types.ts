@@ -54,6 +54,7 @@ export interface Lead {
   latestRemark: string;
   timeline: Activity[];
   isArchived: boolean;
+  deletedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }

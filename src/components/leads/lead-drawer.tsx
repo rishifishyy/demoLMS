@@ -17,7 +17,7 @@ export function LeadDrawer() {
     closeLeadDrawer,
     updateLeadStatus,
     updateLeadAssignee,
-    archiveLead,
+    archiveLead, deleteLead,
     triggerCall,
     triggerWhatsApp,
     openQuickLog
@@ -205,14 +205,14 @@ export function LeadDrawer() {
           <div className="p-3 border-t border-slate-200 bg-slate-50 flex items-center justify-between">
             <button
               onClick={() => {
-                if (confirm(`Are you sure you want to archive lead ${lead.name}?`)) {
-                  archiveLead(lead.id);
+                if (confirm(`Move lead ${lead.name} to the Recycle Bin? You can restore it within 15 days.`)) {
+                  deleteLead(lead.id);
                 }
               }}
-              className="flex items-center gap-1 text-xs font-semibold text-rose-600 hover:text-rose-700 cursor-pointer"
+              className="flex items-center gap-1.5 text-xs font-bold text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 px-3 py-1.5 rounded-lg border border-rose-200 transition-all cursor-pointer"
             >
               <Trash2 className="w-3.5 h-3.5" />
-              <span>Archive Lead</span>
+              <span>Move to Recycle Bin</span>
             </button>
             <button
               onClick={closeLeadDrawer}

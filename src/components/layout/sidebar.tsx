@@ -2,11 +2,18 @@
 
 import React from 'react';
 import { useLMS } from '@/lib/store';
-import { LayoutDashboard, Users, Zap, BarChart3, Building2, LogOut } from 'lucide-react';
+import { LayoutDashboard, Users, Zap, BarChart3, Building2, LogOut, Trash2 } from 'lucide-react';
 
 export function Sidebar() {
-  const { activeTab, setActiveTab, getMetrics, currentUser, logout } = useLMS();
+  const { activeTab, setActiveTab, getMetrics, currentUser, logout, leads } = useLMS();
   const metrics = getMetrics();
+
+  const isSalesperson = currentUser?.role === 'salesperson';
+  const trashCount = leads.filter(l => {
+    if (!l.isArchived && !l.deletedAt) return false;
+    if (isSalesperson && l.assignedTo !== currentUser?.id) return false;
+    return true;
+  }).length;
 
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -18,7 +25,13 @@ export function Sidebar() {
       badgeToday: metrics.todayFollowups,
       badgeOverdue: metrics.overdueFollowups
     },
-    { id: 'reports', label: 'Reports', icon: BarChart3 }
+    { id: 'reports', label: 'Reports', icon: BarChart3 },
+    {
+      id: 'trash',
+      label: 'Recycle Bin',
+      icon: Trash2,
+      badgeTrash: trashCount
+    }
   ];
 
   return (
@@ -64,6 +77,11 @@ export function Sidebar() {
                     {item.badgeToday}
                   </span>
                 ) : null}
+                {item.badgeTrash && item.badgeTrash > 0 ? (
+                  <span className="px-1.5 py-0.5 text-[11px] font-bold rounded-full bg-slate-100 text-slate-600">
+                    {item.badgeTrash}
+                  </span>
+                ) : null}
               </button>
             );
           })}
@@ -102,7 +120,7 @@ export function Sidebar() {
       </aside>
 
       {/* Mobile Bottom Bar */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-slate-200 flex items-center justify-around py-1.5 px-2 shadow-lg backdrop-blur-md">
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-slate-200 flex items-center justify-around py-1.5 px-1 shadow-lg backdrop-blur-md">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
@@ -110,34 +128,38 @@ export function Sidebar() {
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id as any)}
-              className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-lg text-[10px] font-bold transition-all relative cursor-pointer ${
+              className={`flex flex-col items-center justify-center py-1 px-2 rounded-lg text-[10px] font-bold transition-all relative cursor-pointer ${
                 isActive ? 'text-blue-600' : 'text-slate-500 hover:text-slate-800'
               }`}
             >
               <div className="relative">
-                <Icon className={`w-5 h-5 ${isActive ? 'text-blue-600' : 'text-slate-400'}`} />
+                <Icon className={`w-4 h-4 ${isActive ? 'text-blue-600' : 'text-slate-400'}`} />
                 {item.badgeOverdue ? (
-                  <span className="absolute -top-1.5 -right-2.5 w-4 h-4 bg-rose-500 text-white rounded-full text-[9px] flex items-center justify-center font-black">
+                  <span className="absolute -top-1.5 -right-2 w-3.5 h-3.5 bg-rose-500 text-white rounded-full text-[8px] flex items-center justify-center font-black">
                     {item.badgeOverdue}
                   </span>
                 ) : null}
+                {item.badgeTrash && item.badgeTrash > 0 ? (
+                  <span className="absolute -top-1.5 -right-2 w-3.5 h-3.5 bg-slate-500 text-white rounded-full text-[8px] flex items-center justify-center font-black">
+                    {item.badgeTrash}
+                  </span>
+                ) : null}
               </div>
-              <span className="mt-1">{item.label}</span>
+              <span className="mt-0.5 text-[9px] truncate max-w-[50px]">{item.label}</span>
             </button>
           );
         })}
 
-        {/* Mobile Log Out icon tab */}
         <button
           onClick={() => {
             if (confirm('Are you sure you want to log out?')) {
               logout();
             }
           }}
-          className="flex flex-col items-center justify-center py-1 px-2.5 rounded-lg text-[10px] font-bold text-rose-600 hover:text-rose-700 transition-all cursor-pointer"
+          className="flex flex-col items-center justify-center py-1 px-2 rounded-lg text-[10px] font-bold text-rose-600 hover:text-rose-700 transition-all cursor-pointer"
         >
-          <LogOut className="w-5 h-5 text-rose-500" />
-          <span className="mt-1">Log Out</span>
+          <LogOut className="w-4 h-4 text-rose-500" />
+          <span className="mt-0.5 text-[9px]">Log Out</span>
         </button>
       </div>
     </>

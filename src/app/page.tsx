@@ -12,6 +12,7 @@ import { QuickLogDialog } from '@/components/leads/quick-log-dialog';
 import { NewLeadDialog } from '@/components/leads/new-lead-dialog';
 import { UrgentQueue } from '@/components/queue/urgent-queue';
 import { SalesReports } from '@/components/reports/sales-reports';
+import { RecycleBin } from '@/components/trash/recycle-bin';
 import { AlertCircle, ArrowRight, Loader2 } from 'lucide-react';
 
 export default function Home() {
@@ -100,6 +101,8 @@ export default function Home() {
           {activeTab === 'queue' && <UrgentQueue />}
 
           {activeTab === 'reports' && <SalesReports />}
+
+          {activeTab === 'trash' && <RecycleBin />}
         </main>
       </div>
 

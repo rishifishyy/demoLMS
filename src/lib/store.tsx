@@ -34,7 +34,7 @@ interface LMSContextType {
   users: UserProfile[];
   projects: Project[];
   currentUser: UserProfile | null;
-  activeTab: 'dashboard' | 'leads' | 'queue' | 'reports';
+  activeTab: 'dashboard' | 'leads' | 'queue' | 'reports' | 'trash';
   searchQuery: string;
   filterStatus: string;
   filterProject: string;
@@ -50,7 +50,7 @@ interface LMSContextType {
   isAuthenticated: boolean;
   authLoading: boolean;
 
-  setActiveTab: (tab: 'dashboard' | 'leads' | 'queue' | 'reports') => void;
+  setActiveTab: (tab: 'dashboard' | 'leads' | 'queue' | 'reports' | 'trash') => void;
   setSearchQuery: (q: string) => void;
   setFilterStatus: (s: string) => void;
   setFilterProject: (p: string) => void;
@@ -73,6 +73,10 @@ interface LMSContextType {
   updateLeadAssignee: (leadId: string, userId: string) => Promise<void>;
   recordActivity: (leadId: string, activity: { type: ActivityType; details: string; newStatus?: LeadStatus; scheduledFollowup?: string | null }) => Promise<void>;
   archiveLead: (leadId: string) => Promise<void>;
+  deleteLead: (leadId: string) => Promise<void>;
+  restoreLead: (leadId: string) => Promise<void>;
+  permanentDeleteLead: (leadId: string) => Promise<void>;
+  emptyRecycleBin: () => Promise<void>;
   triggerCall: (leadId: string) => void;
   triggerWhatsApp: (leadId: string) => void;
   exportCSV: () => void;
@@ -101,7 +105,7 @@ export function LMSProvider({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [authLoading, setAuthLoading] = useState<boolean>(true);
 
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'leads' | 'queue' | 'reports'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'leads' | 'queue' | 'reports' | 'trash'>('dashboard');
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('ALL');
   const [filterProject, setFilterProject] = useState('ALL');
@@ -449,6 +453,45 @@ export function LMSProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const deleteLead = async (leadId: string) => {
+    const nowIso = new Date().toISOString();
+    const updated = leads.map(l => l.id === leadId ? { ...l, isArchived: true, deletedAt: nowIso, updatedAt: nowIso } : l);
+    setLeads(updated);
+    closeLeadDrawer();
+
+    if (isSupabaseConfigured) {
+      await supabase.from('leads').update({ is_archived: true, updated_at: nowIso }).eq('lead_code', leadId);
+    }
+  };
+
+  const restoreLead = async (leadId: string) => {
+    const nowIso = new Date().toISOString();
+    const updated = leads.map(l => l.id === leadId ? { ...l, isArchived: false, deletedAt: null, updatedAt: nowIso } : l);
+    setLeads(updated);
+
+    if (isSupabaseConfigured) {
+      await supabase.from('leads').update({ is_archived: false, updated_at: nowIso }).eq('lead_code', leadId);
+    }
+  };
+
+  const permanentDeleteLead = async (leadId: string) => {
+    const updated = leads.filter(l => l.id !== leadId);
+    setLeads(updated);
+
+    if (isSupabaseConfigured) {
+      await supabase.from('leads').delete().eq('lead_code', leadId);
+    }
+  };
+
+  const emptyRecycleBin = async () => {
+    const updated = leads.filter(l => !l.isArchived && !l.deletedAt);
+    setLeads(updated);
+
+    if (isSupabaseConfigured) {
+      await supabase.from('leads').delete().eq('is_archived', true);
+    }
+  };
+
   const archiveLead = async (leadId: string) => {
     const updated = leads.map(l => l.id === leadId ? { ...l, isArchived: true, updatedAt: new Date().toISOString() } : l);
     setLeads(updated);
@@ -622,6 +665,10 @@ export function LMSProvider({ children }: { children: React.ReactNode }) {
         updateLeadAssignee,
         recordActivity,
         archiveLead,
+        deleteLead,
+        restoreLead,
+        permanentDeleteLead,
+        emptyRecycleBin,
         triggerCall,
         triggerWhatsApp,
         exportCSV,
