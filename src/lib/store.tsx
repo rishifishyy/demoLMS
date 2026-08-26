@@ -306,7 +306,7 @@ export function LMSProvider({ children }: { children: React.ReactNode }) {
     return 'LD-' + (max + 1);
   };
 
-  const createLead = async (leadData: Omit<Lead, 'id' | 'createdAt' | 'updatedAt' | 'timeline' | 'isArchived' | 'lastContacted'>) => {
+    const createLead = async (leadData: Omit<Lead, 'id' | 'createdAt' | 'updatedAt' | 'timeline' | 'isArchived' | 'lastContacted'>) => {
     const newId = getNextLeadId();
     const nowIso = new Date().toISOString();
 
@@ -319,36 +319,58 @@ export function LMSProvider({ children }: { children: React.ReactNode }) {
       updatedAt: nowIso,
       timeline: [
         {
-          id: 'ACT-' + newId + '-1',
+          id: 'act-' + Date.now(),
           leadId: newId,
-          userId: currentUser?.id || '',
-          type: 'Status Change',
-          details: 'Lead registered into system.',
-          previousStatus: 'None',
+          userId: currentUser?.id || 'sys',
+          type: 'Remark',
+          details: 'Lead created: ' + leadData.latestRemark,
           newStatus: leadData.status,
           timestamp: nowIso
         }
       ]
     };
 
-    setLeads([newLead, ...leads]);
+    setLeads((prev) => [newLead, ...prev]);
+
+    // Send notification email to assigned agent
+    try {
+      const assignedUser = users.find((u) => u.id === leadData.assignedTo);
+      const proj = projects.find((p) => p.id === leadData.projectId);
+      if (assignedUser?.email) {
+        fetch('/api/notify-lead', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            agentEmail: assignedUser.email,
+            agentName: assignedUser.name,
+            customerName: leadData.name,
+            customerPhone: leadData.mobile,
+            propertyLocation: proj?.name || 'Property',
+            leadSource: leadData.source,
+            remark: leadData.latestRemark,
+            leadId: newId
+          })
+        }).catch(() => {});
+      }
+    } catch (_) {}
 
     if (isSupabaseConfigured) {
       try {
-        await supabase.from('leads').insert({
+        const { error: insertErr } = await supabase.from('leads').insert({
           lead_code: newId,
-          name: leadData.name,
-          mobile: leadData.mobile,
-          whatsapp: leadData.whatsapp,
-          project_id: leadData.projectId,
-          source: leadData.source,
-          assigned_to: leadData.assignedTo,
-          status: leadData.status,
-          next_followup: leadData.nextFollowup,
-          latest_remark: leadData.latestRemark
+          name: newLead.name,
+          mobile: newLead.mobile,
+          whatsapp: newLead.whatsapp,
+          project_id: newLead.projectId,
+          source: newLead.source,
+          assigned_to: newLead.assignedTo || null,
+          status: newLead.status,
+          next_followup: newLead.nextFollowup,
+          latest_remark: newLead.latestRemark
         });
-      } catch (e) {
-        console.error('Supabase insert lead error:', e);
+        if (insertErr) console.warn('Supabase lead insert notice:', insertErr.message);
+      } catch (err) {
+        console.warn('Network sync notice:', err);
       }
     }
   };
