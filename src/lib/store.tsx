@@ -34,7 +34,7 @@ interface LMSContextType {
   users: UserProfile[];
   projects: Project[];
   currentUser: UserProfile | null;
-  activeTab: 'dashboard' | 'leads' | 'queue' | 'reports' | 'trash';
+  activeTab: 'dashboard' | 'leads' | 'queue' | 'reports' | 'trash' | 'team';
   searchQuery: string;
   filterStatus: string;
   filterProject: string;
@@ -50,7 +50,7 @@ interface LMSContextType {
   isAuthenticated: boolean;
   authLoading: boolean;
 
-  setActiveTab: (tab: 'dashboard' | 'leads' | 'queue' | 'reports' | 'trash') => void;
+  setActiveTab: (tab: 'dashboard' | 'leads' | 'queue' | 'reports' | 'trash' | 'team') => void;
   setSearchQuery: (q: string) => void;
   setFilterStatus: (s: string) => void;
   setFilterProject: (p: string) => void;
@@ -105,7 +105,7 @@ export function LMSProvider({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [authLoading, setAuthLoading] = useState<boolean>(true);
 
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'leads' | 'queue' | 'reports' | 'trash'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'leads' | 'queue' | 'reports' | 'trash' | 'team'>('dashboard');
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('ALL');
   const [filterProject, setFilterProject] = useState('ALL');

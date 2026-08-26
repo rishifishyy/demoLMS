@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useLMS } from '@/lib/store';
-import { LayoutDashboard, Users, Zap, BarChart3, Building2, LogOut, Trash2 } from 'lucide-react';
+import { LayoutDashboard, Users, Zap, BarChart3, Building2, LogOut, Trash2, UserCheck } from 'lucide-react';
 
 export function Sidebar() {
   const { activeTab, setActiveTab, getMetrics, currentUser, logout, leads } = useLMS();
@@ -26,6 +26,11 @@ export function Sidebar() {
       badgeOverdue: metrics.overdueFollowups
     },
     { id: 'reports', label: 'Reports', icon: BarChart3 },
+    {
+      id: 'team',
+      label: 'Team & WhatsApp',
+      icon: UserCheck
+    },
     {
       id: 'trash',
       label: 'Recycle Bin',
@@ -87,7 +92,7 @@ export function Sidebar() {
           })}
         </nav>
 
-        {/* User Card & Logout */}
+        {/* User Profile Card & Sign Out */}
         <div className="p-3 border-t border-slate-200 bg-slate-50/50 space-y-2">
           {currentUser && (
             <div className="flex items-center gap-2.5 px-2 py-1">
@@ -128,7 +133,7 @@ export function Sidebar() {
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id as any)}
-              className={`flex flex-col items-center justify-center py-1 px-2 rounded-lg text-[10px] font-bold transition-all relative cursor-pointer ${
+              className={`flex flex-col items-center justify-center py-1 px-1.5 rounded-lg text-[10px] font-bold transition-all relative cursor-pointer ${
                 isActive ? 'text-blue-600' : 'text-slate-500 hover:text-slate-800'
               }`}
             >
@@ -145,7 +150,7 @@ export function Sidebar() {
                   </span>
                 ) : null}
               </div>
-              <span className="mt-0.5 text-[9px] truncate max-w-[50px]">{item.label}</span>
+              <span className="mt-0.5 text-[8.5px] truncate max-w-[48px]">{item.label.split(' ')[0]}</span>
             </button>
           );
         })}
@@ -156,10 +161,10 @@ export function Sidebar() {
               logout();
             }
           }}
-          className="flex flex-col items-center justify-center py-1 px-2 rounded-lg text-[10px] font-bold text-rose-600 hover:text-rose-700 transition-all cursor-pointer"
+          className="flex flex-col items-center justify-center py-1 px-1.5 rounded-lg text-[10px] font-bold text-rose-600 hover:text-rose-700 transition-all cursor-pointer"
         >
           <LogOut className="w-4 h-4 text-rose-500" />
-          <span className="mt-0.5 text-[9px]">Log Out</span>
+          <span className="mt-0.5 text-[8.5px]">Log Out</span>
         </button>
       </div>
     </>

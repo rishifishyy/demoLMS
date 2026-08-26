@@ -13,6 +13,7 @@ import { NewLeadDialog } from '@/components/leads/new-lead-dialog';
 import { UrgentQueue } from '@/components/queue/urgent-queue';
 import { SalesReports } from '@/components/reports/sales-reports';
 import { RecycleBin } from '@/components/trash/recycle-bin';
+import { TeamManagementView } from '@/components/team/team-view';
 import { AlertCircle, ArrowRight, Loader2 } from 'lucide-react';
 
 export default function Home() {
@@ -103,6 +104,8 @@ export default function Home() {
           {activeTab === 'reports' && <SalesReports />}
 
           {activeTab === 'trash' && <RecycleBin />}
+
+          {activeTab === 'team' && <TeamManagementView />}
         </main>
       </div>
 
