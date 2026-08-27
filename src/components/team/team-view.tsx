@@ -14,14 +14,30 @@ import {
   CheckCircle2,
   ShieldCheck,
   Building,
-  Key
+  Key,
+  Trash2,
+  Download,
+  UserMinus,
+  AlertTriangle,
+  ArrowRight
 } from 'lucide-react';
 
 export function TeamManagementView() {
-  const { users, currentUser, updateUserProfile, refreshTeam } = useLMS();
+  const { 
+    users, 
+    leads, 
+    currentUser, 
+    updateUserProfile, 
+    deleteUserAndReassignLeads, 
+    exportAgentLeadsCSV, 
+    refreshTeam 
+  } = useLMS();
 
   const [isAddingUser, setIsAddingUser] = useState(false);
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
+  const [offboardingUser, setOffboardingUser] = useState<UserProfile | null>(null);
+  const [reassignToUserId, setReassignToUserId] = useState<string>('');
+  const [isOffboarding, setIsOffboarding] = useState(false);
 
   // Form states
   const [name, setName] = useState('');
@@ -41,6 +57,7 @@ export function TeamManagementView() {
   };
 
   const handleStartEdit = (u: UserProfile) => {
+    setOffboardingUser(null);
     setEditingUserId(u.id);
     setName(u.name);
     setEmail(u.email);
@@ -53,6 +70,7 @@ export function TeamManagementView() {
   };
 
   const handleStartAdd = () => {
+    setOffboardingUser(null);
     setEditingUserId(null);
     setName('');
     setEmail('');
@@ -62,6 +80,36 @@ export function TeamManagementView() {
     setIsAddingUser(true);
     setError('');
     setSuccessMsg('');
+  };
+
+  const handleStartOffboarding = (u: UserProfile) => {
+    setIsAddingUser(false);
+    setOffboardingUser(u);
+    const otherMember = users.find(other => other.id !== u.id);
+    setReassignToUserId(otherMember?.id || '');
+    setError('');
+    setSuccessMsg('');
+  };
+
+  const handleConfirmOffboarding = async () => {
+    if (!offboardingUser) return;
+    setIsOffboarding(true);
+    setError('');
+
+    const res = await deleteUserAndReassignLeads(
+      offboardingUser.id,
+      reassignToUserId || null
+    );
+
+    setIsOffboarding(false);
+
+    if (res.error) {
+      setError(res.error);
+      return;
+    }
+
+    setSuccessMsg(`✓ Successfully removed ${offboardingUser.name} and transferred leads!`);
+    setOffboardingUser(null);
   };
 
   const handleSaveUser = async (e: React.FormEvent) => {
@@ -254,8 +302,106 @@ export function TeamManagementView() {
         </div>
       )}
 
-      {/* Form or List */}
-      {isAddingUser ? (
+      {/* Form or Offboarding or List */}
+      {offboardingUser ? (
+        <div className="bg-rose-50/60 border border-rose-200 rounded-2xl p-5 sm:p-6 shadow-xs space-y-4 max-w-2xl">
+          <div className="flex items-center justify-between pb-3 border-b border-rose-200">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center font-bold">
+                <UserMinus className="w-4 h-4" />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-slate-900">
+                  Offboard & Remove Member: <span className="text-rose-700">{offboardingUser.name}</span>
+                </h4>
+                <p className="text-[11px] text-slate-500">Back up their assigned leads and reassign them before removing.</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setOffboardingUser(null)}
+              className="text-xs font-bold text-slate-500 hover:text-slate-800 cursor-pointer"
+            >
+              Cancel
+            </button>
+          </div>
+
+          {(() => {
+            const userLeads = leads.filter(l => !l.isArchived && l.assignedTo === offboardingUser.id);
+            return (
+              <div className="space-y-4">
+                {/* Backup Leads Banner */}
+                <div className="bg-white border border-slate-200 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-black text-slate-900">
+                        📊 {offboardingUser.name} has <span className="text-blue-600 underline font-black">{userLeads.length} active leads</span>
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 mt-0.5">
+                      Download an offline CSV file backup containing all customer names, phone numbers, and call remarks.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => exportAgentLeadsCSV(offboardingUser.id)}
+                    disabled={userLeads.length === 0}
+                    className="inline-flex items-center justify-center gap-1.5 bg-slate-900 hover:bg-slate-800 disabled:opacity-40 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all cursor-pointer whitespace-nowrap shadow-xs"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Download Leads Backup (CSV)</span>
+                  </button>
+                </div>
+
+                {/* Transfer Leads Selection */}
+                <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-2 shadow-xs">
+                  <label className="block text-xs font-bold text-slate-700">
+                    Transfer all {userLeads.length} leads to:
+                  </label>
+                  <select
+                    value={reassignToUserId}
+                    onChange={(e) => setReassignToUserId(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-900 focus:outline-none focus:border-blue-500 cursor-pointer"
+                  >
+                    <option value="">⚪ Leave Leads Unassigned</option>
+                    {users
+                      .filter(u => u.id !== offboardingUser.id)
+                      .map(u => (
+                        <option key={u.id} value={u.id}>
+                          {u.id === currentUser?.id ? `👑 You (${u.name} - Admin)` : `👤 ${u.name} (${u.role === 'admin' ? 'Admin' : 'Agent'})`}
+                        </option>
+                      ))}
+                  </select>
+                  <p className="text-[10px] text-slate-400">
+                    The selected team member will immediately see all {userLeads.length} leads in their dashboard and calling list.
+                  </p>
+                </div>
+
+                {/* Action buttons */}
+                <div className="pt-2 flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setOffboardingUser(null)}
+                    className="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-200 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isOffboarding}
+                    onClick={handleConfirmOffboarding}
+                    className="bg-rose-600 hover:bg-rose-700 disabled:opacity-60 text-white text-xs font-bold px-6 py-2.5 rounded-xl shadow-md shadow-rose-500/20 cursor-pointer flex items-center gap-1.5"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>{isOffboarding ? 'Removing...' : 'Confirm & Remove Member'}</span>
+                  </button>
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+      ) : isAddingUser ? (
         <form onSubmit={handleSaveUser} className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-xs space-y-4 max-w-2xl">
           <div className="flex items-center justify-between pb-3 border-b border-slate-100">
             <h4 className="text-sm font-bold text-slate-900">
@@ -370,6 +516,7 @@ export function TeamManagementView() {
           {users.map((u) => {
             const isUserAdmin = u.role === 'admin';
             const isSelf = u.id === currentUser?.id;
+            const memberLeadsCount = leads.filter(l => !l.isArchived && l.assignedTo === u.id).length;
 
             return (
               <div
@@ -399,6 +546,9 @@ export function TeamManagementView() {
                           You
                         </span>
                       )}
+                      <span className="text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full">
+                        {memberLeadsCount} Leads
+                      </span>
                     </div>
 
                     <div className="space-y-1 mt-2 text-xs text-slate-500">
@@ -418,15 +568,44 @@ export function TeamManagementView() {
                   <span className="text-[11px] text-slate-400 font-medium">
                     {u.phone ? '✓ Ready for 1-tap alerts' : '⚠️ Add WhatsApp number'}
                   </span>
-                  {(isAdmin || isSelf) && (
-                    <button
-                      onClick={() => handleStartEdit(u)}
-                      className="inline-flex items-center gap-1.5 bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-200 text-slate-700 hover:text-blue-700 text-xs font-bold px-3 py-1.5 rounded-xl transition-all cursor-pointer"
-                    >
-                      <Edit2 className="w-3 h-3" />
-                      <span>Edit Phone Number</span>
-                    </button>
-                  )}
+                  
+                  <div className="flex items-center gap-2">
+                    {/* 1-Click Backup Leads Button */}
+                    {memberLeadsCount > 0 && (
+                      <button
+                        type="button"
+                        title="Download CSV backup of this agent's leads"
+                        onClick={() => exportAgentLeadsCSV(u.id)}
+                        className="inline-flex items-center gap-1 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-600 text-xs font-bold px-2.5 py-1.5 rounded-xl transition-all cursor-pointer"
+                      >
+                        <Download className="w-3 h-3 text-slate-500" />
+                        <span className="hidden sm:inline">Backup Leads</span>
+                      </button>
+                    )}
+
+                    {/* Edit Button */}
+                    {(isAdmin || isSelf) && (
+                      <button
+                        onClick={() => handleStartEdit(u)}
+                        className="inline-flex items-center gap-1 bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-200 text-slate-700 hover:text-blue-700 text-xs font-bold px-3 py-1.5 rounded-xl transition-all cursor-pointer"
+                      >
+                        <Edit2 className="w-3 h-3" />
+                        <span>Edit</span>
+                      </button>
+                    )}
+
+                    {/* Offboard / Remove Button */}
+                    {isAdmin && !isSelf && (
+                      <button
+                        type="button"
+                        onClick={() => handleStartOffboarding(u)}
+                        className="inline-flex items-center gap-1 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-xs font-bold px-3 py-1.5 rounded-xl transition-all cursor-pointer"
+                      >
+                        <Trash2 className="w-3 h-3 text-rose-500" />
+                        <span>Remove</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             );

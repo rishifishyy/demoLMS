@@ -80,7 +80,9 @@ interface LMSContextType {
   triggerCall: (leadId: string) => void;
   triggerWhatsApp: (leadId: string) => void;
   exportCSV: () => void;
+  exportAgentLeadsCSV: (userId: string) => void;
   updateUserProfile: (userId: string, data: { name: string; phone: string; role: 'admin' | 'salesperson' }) => Promise<{ success?: boolean; error?: string }>;
+  deleteUserAndReassignLeads: (userId: string, reassignToUserId: string | null) => Promise<{ success?: boolean; error?: string }>;
   refreshTeam: () => Promise<void>;
 
   getFilteredLeads: () => Lead[];
@@ -658,6 +660,88 @@ export function LMSProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const exportAgentLeadsCSV = (userId: string) => {
+    const targetUser = users.find(u => u.id === userId);
+    const agentLeads = leads.filter(l => !l.isArchived && l.assignedTo === userId);
+    const headers = ['Lead ID', 'Name', 'Mobile', 'WhatsApp', 'Project', 'Source', 'Assigned To', 'Status', 'Last Contacted', 'Next Followup', 'Latest Remark'];
+    const rows = agentLeads.map(l => [
+      '"' + (l.id || '').replace(/"/g, '""') + '"',
+      '"' + (l.name || '').replace(/"/g, '""') + '"',
+      '"' + (l.mobile || '').replace(/"/g, '""') + '"',
+      '"' + (l.whatsapp || '').replace(/"/g, '""') + '"',
+      '"' + (projects.find(p => p.id === l.projectId)?.name || '').replace(/"/g, '""') + '"',
+      '"' + (l.source || '').replace(/"/g, '""') + '"',
+      '"' + (targetUser?.name || 'Unassigned').replace(/"/g, '""') + '"',
+      '"' + (l.status || '').replace(/"/g, '""') + '"',
+      '"' + (l.lastContacted || '') + '"',
+      '"' + (l.nextFollowup || '') + '"',
+      '"' + (l.latestRemark || '').replace(/"/g, '""').replace(/\n/g, ' ') + '"'
+    ]);
+
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(e => e.join(','))].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    const safeName = (targetUser?.name || 'Member').replace(/[^a-zA-Z0-9]/g, '_');
+    link.setAttribute('download', `Backup_Leads_${safeName}_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const deleteUserAndReassignLeads = async (
+    userId: string,
+    reassignToUserId: string | null
+  ): Promise<{ success?: boolean; error?: string }> => {
+    try {
+      if (currentUser?.id === userId) {
+        return { error: 'You cannot delete your own active Admin profile.' };
+      }
+
+      if (isSupabaseConfigured) {
+        // 1. Reassign or unassign all leads in Supabase
+        const { error: reassignErr } = await supabase
+          .from('leads')
+          .update({ assigned_to: reassignToUserId || null })
+          .eq('assigned_to', userId);
+
+        if (reassignErr) {
+          console.error('Error updating leads in Supabase:', reassignErr);
+        }
+
+        // 2. Delete user profile in Supabase profiles table
+        const { error: deleteErr } = await supabase
+          .from('profiles')
+          .delete()
+          .eq('id', userId);
+
+        if (deleteErr) {
+          console.error('Error deleting profile in Supabase:', deleteErr);
+          return { error: deleteErr.message };
+        }
+      }
+
+      // Update local state: reassign leads
+      setLeads(prev =>
+        prev.map(l =>
+          l.assignedTo === userId
+            ? { ...l, assignedTo: reassignToUserId || '' }
+            : l
+        )
+      );
+
+      // Update local state: remove user from users list
+      setUsers(prev => prev.filter(u => u.id !== userId));
+
+      return { success: true };
+    } catch (err: any) {
+      console.error('Catch error in deleteUserAndReassignLeads:', err);
+      return { error: err.message || 'Failed to offboard team member' };
+    }
+  };
+
   const getFilteredLeads = () => {
     const isSalesperson = currentUser?.role === 'salesperson';
 
@@ -776,7 +860,9 @@ export function LMSProvider({ children }: { children: React.ReactNode }) {
         triggerCall,
         triggerWhatsApp,
         exportCSV,
+        exportAgentLeadsCSV,
         updateUserProfile,
+        deleteUserAndReassignLeads,
         refreshTeam,
         getFilteredLeads,
         getMetrics
