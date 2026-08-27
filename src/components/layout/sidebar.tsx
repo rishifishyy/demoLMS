@@ -128,7 +128,7 @@ export function Sidebar() {
       </aside>
 
       {/* Mobile Bottom Bar */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-slate-200 flex items-center justify-around py-1.5 px-1 shadow-lg backdrop-blur-md">
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 border-t border-slate-200 flex items-center justify-around py-2 px-1 shadow-lg backdrop-blur-md pb-safe">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;

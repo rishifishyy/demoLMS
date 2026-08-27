@@ -97,26 +97,27 @@ export function UrgentQueue() {
                     </span>
                   )}
 
-                  <div className="flex items-center gap-1.5">
+                  <div className="grid grid-cols-3 gap-2 w-full md:w-auto md:flex md:items-center">
                     <button
                       onClick={() => triggerCall(lead.id)}
-                      className="inline-flex items-center gap-1 bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-xs transition-all cursor-pointer"
+                      className="flex items-center justify-center gap-1.5 bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold py-2 px-3 rounded-xl shadow-xs transition-all cursor-pointer"
                     >
                       <Phone className="w-3.5 h-3.5" />
                       <span>Call Now</span>
                     </button>
                     <button
                       onClick={() => triggerWhatsApp(lead.id)}
-                      className="inline-flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-xs transition-all cursor-pointer"
+                      className="flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2 px-3 rounded-xl shadow-xs transition-all cursor-pointer"
                     >
                       <MessageSquare className="w-3.5 h-3.5" />
                       <span>WhatsApp</span>
                     </button>
                     <button
                       onClick={() => openLeadDrawer(lead.id)}
-                      className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg cursor-pointer"
+                      className="flex items-center justify-center gap-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold py-2 px-3 rounded-xl transition-all cursor-pointer"
                     >
-                      <Eye className="w-4 h-4" />
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>Details</span>
                     </button>
                   </div>
                 </div>

@@ -11,6 +11,7 @@ body {
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
   overscroll-behavior-y: none;
+  -webkit-font-smoothing: antialiased;
 }
 
 /* Hide scrollbar for Chrome, Safari and Opera */
@@ -24,9 +25,25 @@ body {
   scrollbar-width: none;  /* Firefox */
 }
 
-/* Smooth mobile inputs without auto-zoom */
+/* Smooth mobile inputs without auto-zoom on iOS/Android */
 @media screen and (max-width: 768px) {
   input, select, textarea {
     font-size: 16px !important;
   }
+}
+
+/* Safe area inset utilities for modern iPhone & Android notch/home bars */
+.pb-safe {
+  padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+}
+
+.bottom-safe {
+  bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Touch feedback */
+button, a {
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
 }

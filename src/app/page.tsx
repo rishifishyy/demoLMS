@@ -14,11 +14,11 @@ import { UrgentQueue } from '@/components/queue/urgent-queue';
 import { SalesReports } from '@/components/reports/sales-reports';
 import { RecycleBin } from '@/components/trash/recycle-bin';
 import { TeamManagementView } from '@/components/team/team-view';
-import { AlertCircle, ArrowRight, Loader2 } from 'lucide-react';
+import { AlertCircle, ArrowRight, Loader2, Plus } from 'lucide-react';
 
 export default function Home() {
   const router = useRouter();
-  const { isAuthenticated, authLoading, activeTab, setActiveTab, getMetrics } = useLMS();
+  const { isAuthenticated, authLoading, activeTab, setActiveTab, openNewLeadModal, getMetrics } = useLMS();
 
   // Strict Authentication Guard
   useEffect(() => {
@@ -108,6 +108,15 @@ export default function Home() {
           {activeTab === 'team' && <TeamManagementView />}
         </main>
       </div>
+
+      {/* Mobile Floating Action Button (FAB) for Quick Lead Creation */}
+      <button
+        onClick={openNewLeadModal}
+        aria-label="Add New Customer Lead"
+        className="md:hidden fixed right-4 bottom-20 z-30 w-13 h-13 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-xl shadow-blue-600/40 flex items-center justify-center transition-transform active:scale-90 cursor-pointer border-2 border-white"
+      >
+        <Plus className="w-6 h-6 stroke-[2.5]" />
+      </button>
 
       {/* Slide-over Drawers & Modals */}
       <LeadDrawer />
