@@ -247,7 +247,9 @@ export function TeamDialog({ isOpen, onClose }: TeamDialogProps) {
           }
 
           if (authData?.user) {
-            const { error: profileErr } = await supabase.from('profiles').upsert({
+            // First attempt with authClient (using new user credentials if auto-confirmed)
+            const clientToUse = authData.session ? authClient : supabase;
+            const { error: profileErr } = await clientToUse.from('profiles').upsert({
               id: authData.user.id,
               full_name: trimmedName,
               email: trimmedEmail,
@@ -256,7 +258,18 @@ export function TeamDialog({ isOpen, onClose }: TeamDialogProps) {
               avatar_url: role === 'admin' ? '/admin-avatar.png' : '/agent-avatar.png'
             });
 
-            if (profileErr) throw profileErr;
+            if (profileErr) {
+              // Fallback to main client
+              const { error: fallbackErr } = await supabase.from('profiles').upsert({
+                id: authData.user.id,
+                full_name: trimmedName,
+                email: trimmedEmail,
+                role: role,
+                phone: trimmedPhone || null,
+                avatar_url: role === 'admin' ? '/admin-avatar.png' : '/agent-avatar.png'
+              });
+              if (fallbackErr) throw fallbackErr;
+            }
           }
 
           await refreshTeam();
