@@ -123,6 +123,21 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.leads;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.activities;
 
 -- ============================================================================
+-- RPC FUNCTION: ADMIN SAFE USER DELETION (Removes from auth.users permanently)
+-- ============================================================================
+CREATE OR REPLACE FUNCTION delete_user_by_admin(target_user_id UUID)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  -- Delete from auth.users (cascades to profiles and sets assigned_to = NULL in leads)
+  DELETE FROM auth.users WHERE id = target_user_id;
+  DELETE FROM public.profiles WHERE id = target_user_id;
+END;
+$$;
+
+-- ============================================================================
 -- SEED SAMPLE REAL ESTATE PROJECTS
 -- ============================================================================
 INSERT INTO public.projects (id, name, location, property_type, price_range) VALUES

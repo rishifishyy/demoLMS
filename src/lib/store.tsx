@@ -711,15 +711,22 @@ export function LMSProvider({ children }: { children: React.ReactNode }) {
           console.error('Error updating leads in Supabase:', reassignErr);
         }
 
-        // 2. Delete user profile in Supabase profiles table
-        const { error: deleteErr } = await supabase
-          .from('profiles')
-          .delete()
-          .eq('id', userId);
+        // 2. Permanently delete user from auth.users (cascades to profiles automatically)
+        const { error: rpcErr } = await supabase.rpc('delete_user_by_admin', {
+          target_user_id: userId
+        });
 
-        if (deleteErr) {
-          console.error('Error deleting profile in Supabase:', deleteErr);
-          return { error: deleteErr.message };
+        if (rpcErr) {
+          // Fallback: Delete user profile in Supabase profiles table directly
+          const { error: deleteErr } = await supabase
+            .from('profiles')
+            .delete()
+            .eq('id', userId);
+
+          if (deleteErr) {
+            console.error('Error deleting profile in Supabase:', deleteErr);
+            return { error: deleteErr.message };
+          }
         }
       }
 
