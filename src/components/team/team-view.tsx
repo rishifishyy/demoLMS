@@ -210,6 +210,7 @@ export function TeamManagementView() {
             email: trimmedEmail,
             password: password,
             options: {
+              emailRedirectTo: typeof window !== 'undefined' ? `${window.location.origin}/login` : 'https://happy-lms.vercel.app/login',
               data: {
                 full_name: trimmedName,
                 role: role,
