@@ -45,12 +45,12 @@ export default function Home() {
       <Sidebar />
 
       {/* Main Content Area */}
-      <div className="flex-1 w-full md:ml-64 flex flex-col min-h-screen pb-20 md:pb-6">
+      <div className="flex-1 w-full md:ml-64 flex flex-col min-h-screen pb-28 md:pb-6">
         {/* Top Header */}
         <Header />
 
         {/* Page Body */}
-        <main className="flex-1 p-3 sm:p-6 max-w-7xl w-full mx-auto space-y-4 sm:space-y-5">
+        <main className="flex-1 p-3 sm:p-6 max-w-7xl w-full mx-auto space-y-4 sm:space-y-5 pb-safe">
           {activeTab === 'dashboard' && (
             <>
               {/* Urgent Follow-up Alert Banner */}

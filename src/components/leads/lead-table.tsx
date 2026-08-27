@@ -70,7 +70,7 @@ export function LeadTable() {
             <select
               value={filterProject}
               onChange={(e) => setFilterProject(e.target.value)}
-              className="bg-slate-50 border border-slate-200 text-slate-700 text-xs font-medium rounded-lg px-2 py-1.5 focus:outline-none focus:border-blue-500 cursor-pointer"
+              className="bg-slate-50 border border-slate-200 text-slate-700 text-xs font-medium rounded-xl px-2.5 py-2 focus:outline-none focus:border-blue-500 cursor-pointer"
             >
               <option value="ALL">All Properties</option>
               {projects.map((p) => (
@@ -81,7 +81,7 @@ export function LeadTable() {
             <select
               value={filterSource}
               onChange={(e) => setFilterSource(e.target.value)}
-              className="bg-slate-50 border border-slate-200 text-slate-700 text-xs font-medium rounded-lg px-2 py-1.5 focus:outline-none focus:border-blue-500 cursor-pointer"
+              className="bg-slate-50 border border-slate-200 text-slate-700 text-xs font-medium rounded-xl px-2.5 py-2 focus:outline-none focus:border-blue-500 cursor-pointer"
             >
               <option value="ALL">All Sources</option>
               {LEAD_SOURCES.map((s) => (
@@ -93,7 +93,7 @@ export function LeadTable() {
               value={filterSalesperson}
               onChange={(e) => setFilterSalesperson(e.target.value)}
               disabled={isSalesperson}
-              className="bg-slate-50 border border-slate-200 text-slate-700 text-xs font-medium rounded-lg px-2 py-1.5 focus:outline-none focus:border-blue-500 cursor-pointer disabled:opacity-60"
+              className="bg-slate-50 border border-slate-200 text-slate-700 text-xs font-medium rounded-xl px-2.5 py-2 focus:outline-none focus:border-blue-500 cursor-pointer disabled:opacity-60"
             >
               <option value="ALL">{isSalesperson ? 'My Leads' : 'All Salespersons'}</option>
               {users.filter(u => u.role === 'salesperson').map((u) => (
@@ -104,7 +104,7 @@ export function LeadTable() {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="bg-slate-50 border border-slate-200 text-slate-700 text-xs font-medium rounded-lg px-2 py-1.5 focus:outline-none focus:border-blue-500 cursor-pointer"
+              className="bg-slate-50 border border-slate-200 text-slate-700 text-xs font-medium rounded-xl px-2.5 py-2 focus:outline-none focus:border-blue-500 cursor-pointer"
             >
               <option value="newest">Sort: Newest</option>
               <option value="followup">Sort: Follow-up</option>

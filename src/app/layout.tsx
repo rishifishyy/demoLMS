@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Plus_Jakarta_Sans } from 'next/font/google';
 import './globals.css';
 import { LMSProvider } from '@/lib/store';
@@ -10,8 +10,22 @@ const fontSans = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: 'EstateFlow LMS — Real Estate Lead Management System',
-  description: 'Centralized lead pipeline, 1-tap dialer & follow-up management for real estate sales teams.'
+  title: 'HappyLMS — Real Estate CRM & Lead Management',
+  description: 'Centralized lead pipeline, 1-tap dialer & follow-up management for real estate sales teams.',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'HappyLMS'
+  }
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: 'cover',
+  themeColor: '#2563eb'
 };
 
 export default function RootLayout({
