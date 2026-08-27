@@ -19,7 +19,8 @@ import {
   Download,
   UserMinus,
   AlertTriangle,
-  ArrowRight
+  ArrowRight,
+  MessageSquare
 } from 'lucide-react';
 
 export function TeamManagementView() {
@@ -246,13 +247,26 @@ export function TeamManagementView() {
           }
 
           await refreshTeam();
+
+          // Trigger Welcome Email in background
+          fetch('/api/welcome-member', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              name: trimmedName,
+              email: trimmedEmail,
+              role: role,
+              phone: trimmedPhone,
+              password: password
+            })
+          }).catch((e) => console.warn('Welcome email error:', e));
         }
 
-        setSuccessMsg(`✓ New ${role === 'admin' ? 'Admin' : 'Team Agent'} "${trimmedName}" created successfully!`);
+        setSuccessMsg(`✓ New ${role === 'admin' ? 'Admin' : 'Team Agent'} "${trimmedName}" created! Welcome email sent to ${trimmedEmail}.`);
         setTimeout(() => {
           setIsAddingUser(false);
           setEditingUserId(null);
-        }, 1200);
+        }, 1500);
       }
     } catch (err: any) {
       setError(err.message || 'Failed to save team member');
@@ -569,7 +583,23 @@ export function TeamManagementView() {
                     {u.phone ? '✓ Ready for 1-tap alerts' : '⚠️ Add WhatsApp number'}
                   </span>
                   
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {/* 1-Tap WhatsApp Welcome / Login Invitation */}
+                    {isAdmin && u.phone && (
+                      <a
+                        href={`https://wa.me/91${u.phone.replace(/\D/g, '').slice(-10)}?text=${encodeURIComponent(
+                          `🎉 *WELCOME TO HAPPYLMS CRM*\n\nHello *${u.name}*,\n\nYou have been added to HappyLMS CRM as a *${u.role === 'admin' ? 'Admin' : 'Team Agent'}*!\n\n🔗 *Login Portal:* https://happy-lms.vercel.app/login\n📧 *Email:* ${u.email}\n📱 *WhatsApp Number:* +91 ${u.phone}\n\nLog in now to view your assigned leads and manage property inquiries.`
+                        )}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        title="Send Login Portal Link & Welcome Message via WhatsApp"
+                        className="inline-flex items-center gap-1 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 text-xs font-bold px-2.5 py-1.5 rounded-xl transition-all cursor-pointer"
+                      >
+                        <MessageSquare className="w-3 h-3 text-emerald-600" />
+                        <span className="hidden sm:inline">Invite / WA</span>
+                      </a>
+                    )}
+
                     {/* 1-Click Backup Leads Button */}
                     {memberLeadsCount > 0 && (
                       <button
@@ -579,7 +609,7 @@ export function TeamManagementView() {
                         className="inline-flex items-center gap-1 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-600 text-xs font-bold px-2.5 py-1.5 rounded-xl transition-all cursor-pointer"
                       >
                         <Download className="w-3 h-3 text-slate-500" />
-                        <span className="hidden sm:inline">Backup Leads</span>
+                        <span className="hidden sm:inline">Backup</span>
                       </button>
                     )}
 
