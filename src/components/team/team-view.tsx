@@ -20,7 +20,9 @@ import {
   UserMinus,
   AlertTriangle,
   ArrowRight,
-  MessageSquare
+  MessageSquare,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 
 export function TeamManagementView() {
@@ -46,6 +48,7 @@ export function TeamManagementView() {
   const [phone, setPhone] = useState('');
   const [role, setRole] = useState<'admin' | 'salesperson'>('salesperson');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [loading, setLoading] = useState(false);
@@ -511,14 +514,24 @@ export function TeamManagementView() {
           {!editingUserId && (
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">Initial Password *</label>
-              <input
-                type="password"
-                required
-                placeholder="Min 6 characters (e.g. Agent@123)"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 font-medium focus:outline-none focus:border-blue-500 focus:bg-white"
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  placeholder="Min 6 characters (e.g. Agent@123)"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-3.5 pr-10 py-2.5 text-xs text-slate-900 font-medium focus:outline-none focus:border-blue-500 focus:bg-white"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none cursor-pointer"
+                  title={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
           )}
 
