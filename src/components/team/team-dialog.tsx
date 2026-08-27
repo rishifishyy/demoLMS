@@ -25,8 +25,10 @@ import {
   AlertTriangle,
   MessageSquare,
   Eye,
-  EyeOff
+  EyeOff,
+  Camera
 } from 'lucide-react';
+import { getDefaultAvatar, compressImageFile } from '@/lib/utils';
 
 interface TeamDialogProps {
   isOpen: boolean;
@@ -55,6 +57,8 @@ export function TeamDialog({ isOpen, onClose }: TeamDialogProps) {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [role, setRole] = useState<'admin' | 'salesperson'>('salesperson');
+  const [avatar, setAvatar] = useState('');
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
@@ -70,6 +74,21 @@ export function TeamDialog({ isOpen, onClose }: TeamDialogProps) {
     setPhone(raw);
   };
 
+  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setUploadingPhoto(true);
+      const compressed = await compressImageFile(file, 256, 0.85);
+      setAvatar(compressed);
+    } catch (err) {
+      console.error('Photo processing error:', err);
+      setError('Could not process the selected photo. Please try a different image.');
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
   const handleStartEdit = (u: UserProfile) => {
     setOffboardingUser(null);
     setEditingUserId(u.id);
@@ -77,6 +96,7 @@ export function TeamDialog({ isOpen, onClose }: TeamDialogProps) {
     setEmail(u.email);
     setPhone(u.phone || '');
     setRole(u.role);
+    setAvatar(u.avatar && !u.avatar.includes('ui-avatars.com') ? u.avatar : '');
     setPassword('');
     setIsAddingUser(true);
     setError('');
@@ -90,6 +110,7 @@ export function TeamDialog({ isOpen, onClose }: TeamDialogProps) {
     setEmail('');
     setPhone('');
     setRole('salesperson');
+    setAvatar('');
     setPassword('');
     setIsAddingUser(true);
     setError('');
@@ -167,12 +188,15 @@ export function TeamDialog({ isOpen, onClose }: TeamDialogProps) {
     setLoading(true);
 
     try {
+      const finalAvatar = avatar || getDefaultAvatar(trimmedName, role);
+
       if (editingUserId) {
         // Update user profile
         const res = await updateUserProfile(editingUserId, {
           name: trimmedName,
           phone: trimmedPhone,
-          role: role
+          role: role,
+          avatar: finalAvatar
         });
 
         if (res.error) {
@@ -229,7 +253,8 @@ export function TeamDialog({ isOpen, onClose }: TeamDialogProps) {
               data: {
                 full_name: trimmedName,
                 role: role,
-                phone: trimmedPhone || null
+                phone: trimmedPhone || null,
+                avatar_url: finalAvatar
               }
             }
           });
@@ -259,7 +284,7 @@ export function TeamDialog({ isOpen, onClose }: TeamDialogProps) {
               email: trimmedEmail,
               role: role,
               phone: trimmedPhone || null,
-              avatar_url: role === 'admin' ? '/admin-avatar.png' : '/agent-avatar.png'
+              avatar_url: finalAvatar
             });
 
             if (profileErr) {
@@ -270,7 +295,7 @@ export function TeamDialog({ isOpen, onClose }: TeamDialogProps) {
                 email: trimmedEmail,
                 role: role,
                 phone: trimmedPhone || null,
-                avatar_url: role === 'admin' ? '/admin-avatar.png' : '/agent-avatar.png'
+                avatar_url: finalAvatar
               });
               if (fallbackErr) throw fallbackErr;
             }
@@ -455,6 +480,49 @@ export function TeamDialog({ isOpen, onClose }: TeamDialogProps) {
                 >
                   Back to List
                 </button>
+              </div>
+
+              {/* Profile Photo Uploader & Preview */}
+              <div className="flex items-center gap-3.5 p-3 bg-slate-50 border border-slate-200 rounded-2xl">
+                <div className="relative group shrink-0">
+                  <img
+                    src={avatar || getDefaultAvatar(name || 'Member', role)}
+                    alt="Profile Preview"
+                    className="w-14 h-14 rounded-2xl object-cover border-2 border-white shadow-xs bg-slate-200"
+                  />
+                  <label className="absolute inset-0 bg-slate-900/50 rounded-2xl opacity-0 group-hover:opacity-100 flex items-center justify-center text-white cursor-pointer transition-opacity">
+                    <Camera className="w-5 h-5" />
+                    <input type="file" accept="image/*" className="hidden" onChange={handleImageSelect} />
+                  </label>
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <h5 className="text-xs font-bold text-slate-800">Profile Photo</h5>
+                    <span className="text-[10px] font-semibold text-slate-400">
+                      {avatar ? '(Custom Photo Uploaded)' : '(Auto Initials Default)'}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 mb-2">Upload a photo from your phone or use default icon</p>
+                  
+                  <div className="flex items-center gap-2">
+                    <label className="inline-flex items-center gap-1.5 bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 text-xs font-bold px-3 py-1 rounded-xl shadow-2xs cursor-pointer transition-all">
+                      <Camera className="w-3.5 h-3.5 text-blue-600" />
+                      <span>{uploadingPhoto ? 'Processing...' : 'Upload Photo'}</span>
+                      <input type="file" accept="image/*" className="hidden" onChange={handleImageSelect} />
+                    </label>
+
+                    {avatar && (
+                      <button
+                        type="button"
+                        onClick={() => setAvatar('')}
+                        className="text-xs text-rose-600 hover:text-rose-700 font-semibold px-1.5 py-0.5 cursor-pointer"
+                      >
+                        Reset Default
+                      </button>
+                    )}
+                  </div>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

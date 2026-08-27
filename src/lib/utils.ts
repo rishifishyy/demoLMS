@@ -54,3 +54,57 @@ export function getFollowupCategory(dateStr: string | null | undefined): 'overdu
   if (target >= startOfToday && target <= endOfToday) return 'today';
   return 'upcoming';
 }
+
+export function getDefaultAvatar(name: string, role?: string): string {
+  const cleanName = (name || 'User').trim();
+  const safeName = encodeURIComponent(cleanName);
+  const bg = role === 'admin' ? '1d4ed8' : '0d9488'; // Vibrant Blue for Admin, Emerald for Agent
+  return `https://ui-avatars.com/api/?name=${safeName}&background=${bg}&color=ffffff&bold=true&size=160&font-size=0.38`;
+}
+
+export function compressImageFile(file: File, maxSize = 256, quality = 0.85): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target?.result as string;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const width = img.width;
+        const height = img.height;
+
+        // Crop to square aspect ratio from center
+        const minDim = Math.min(width, height);
+        const startX = (width - minDim) / 2;
+        const startY = (height - minDim) / 2;
+
+        canvas.width = Math.min(minDim, maxSize);
+        canvas.height = Math.min(minDim, maxSize);
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(event.target?.result as string);
+          return;
+        }
+
+        ctx.drawImage(
+          img,
+          startX,
+          startY,
+          minDim,
+          minDim,
+          0,
+          0,
+          canvas.width,
+          canvas.height
+        );
+
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = (err) => reject(err);
+    };
+    reader.onerror = (err) => reject(err);
+  });
+}
+

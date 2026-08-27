@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Lead, UserProfile, Project, LeadStatus, ActivityType } from './types';
 import { supabase, isSupabaseConfigured } from './supabase/client';
-import { getFollowupCategory } from './utils';
+import { getFollowupCategory, getDefaultAvatar } from './utils';
 
 export const INITIAL_PROJECTS: Project[] = [
   {
@@ -81,7 +81,7 @@ interface LMSContextType {
   triggerWhatsApp: (leadId: string) => void;
   exportCSV: () => void;
   exportAgentLeadsCSV: (userId: string) => void;
-  updateUserProfile: (userId: string, data: { name: string; phone: string; role: 'admin' | 'salesperson' }) => Promise<{ success?: boolean; error?: string }>;
+  updateUserProfile: (userId: string, data: { name: string; phone: string; role: 'admin' | 'salesperson'; avatar?: string }) => Promise<{ success?: boolean; error?: string }>;
   deleteUserAndReassignLeads: (userId: string, reassignToUserId: string | null) => Promise<{ success?: boolean; error?: string }>;
   refreshTeam: () => Promise<void>;
 
@@ -145,7 +145,9 @@ export function LMSProvider({ children }: { children: React.ReactNode }) {
               email: session.user.email || '',
               role: profile?.role === 'admin' ? 'admin' : 'salesperson',
               phone: profile?.phone || '',
-              avatar: profile?.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80'
+              avatar: profile?.avatar_url && !profile.avatar_url.includes('unsplash') 
+              ? profile.avatar_url 
+              : getDefaultAvatar(profile?.full_name || session.user.email?.split('@')[0] || 'User', profile?.role || 'salesperson')
             };
 
             if (mounted) {
@@ -182,7 +184,9 @@ export function LMSProvider({ children }: { children: React.ReactNode }) {
             email: session.user.email || '',
             role: profile?.role === 'admin' ? 'admin' : 'salesperson',
             phone: profile?.phone || '',
-            avatar: profile?.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80'
+            avatar: profile?.avatar_url && !profile.avatar_url.includes('unsplash')
+              ? profile.avatar_url
+              : getDefaultAvatar(profile?.full_name || session.user.email?.split('@')[0] || 'User', profile?.role || 'salesperson')
           };
 
           if (mounted) {
@@ -242,7 +246,9 @@ export function LMSProvider({ children }: { children: React.ReactNode }) {
               email: p.email,
               role: p.role,
               phone: p.phone || '',
-              avatar: p.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80'
+              avatar: p.avatar_url && !p.avatar_url.includes('unsplash')
+                ? p.avatar_url
+                : getDefaultAvatar(p.full_name, p.role)
             })));
           }
         } catch (e) {
@@ -598,7 +604,9 @@ export function LMSProvider({ children }: { children: React.ReactNode }) {
           email: p.email,
           role: p.role,
           phone: p.phone || '',
-          avatar: p.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80'
+          avatar: p.avatar_url && !p.avatar_url.includes('unsplash')
+            ? p.avatar_url
+            : getDefaultAvatar(p.full_name, p.role)
         })));
       }
     } catch (e) {
@@ -608,21 +616,27 @@ export function LMSProvider({ children }: { children: React.ReactNode }) {
 
   const updateUserProfile = async (
     userId: string,
-    data: { name: string; phone: string; role: 'admin' | 'salesperson' }
+    data: { name: string; phone: string; role: 'admin' | 'salesperson'; avatar?: string }
   ): Promise<{ success?: boolean; error?: string }> => {
     try {
       const trimmedName = data.name.trim();
       const trimmedPhone = data.phone.trim();
       const role = data.role;
+      const avatar = data.avatar;
 
       if (isSupabaseConfigured) {
+        const updatePayload: any = {
+          full_name: trimmedName,
+          phone: trimmedPhone || null,
+          role: role
+        };
+        if (avatar !== undefined) {
+          updatePayload.avatar_url = avatar;
+        }
+
         const { error: updateErr, data: updatedData } = await supabase
           .from('profiles')
-          .update({
-            full_name: trimmedName,
-            phone: trimmedPhone || null,
-            role: role
-          })
+          .update(updatePayload)
           .eq('id', userId)
           .select();
 
@@ -640,7 +654,13 @@ export function LMSProvider({ children }: { children: React.ReactNode }) {
       setUsers(prev =>
         prev.map(u =>
           u.id === userId
-            ? { ...u, name: trimmedName, phone: trimmedPhone, role: role }
+            ? { 
+                ...u, 
+                name: trimmedName, 
+                phone: trimmedPhone, 
+                role: role, 
+                ...(avatar !== undefined ? { avatar } : {}) 
+              }
             : u
         )
       );
@@ -648,7 +668,13 @@ export function LMSProvider({ children }: { children: React.ReactNode }) {
       if (currentUser?.id === userId) {
         setCurrentUser(prev =>
           prev
-            ? { ...prev, name: trimmedName, phone: trimmedPhone, role: role }
+            ? { 
+                ...prev, 
+                name: trimmedName, 
+                phone: trimmedPhone, 
+                role: role, 
+                ...(avatar !== undefined ? { avatar } : {}) 
+              }
             : null
         );
       }
