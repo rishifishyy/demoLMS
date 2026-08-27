@@ -4,12 +4,15 @@ import React, { useState } from 'react';
 import { useLMS } from '@/lib/store';
 import { Search, Plus, Building2, LogOut, Users } from 'lucide-react';
 import { TeamDialog } from '@/components/team/team-dialog';
+import { getUserRoleDisplay, isSuperAdminUser } from '@/lib/utils';
 
 export function Header() {
   const { searchQuery, setSearchQuery, openNewLeadModal, currentUser, logout } = useLMS();
   const [isTeamOpen, setIsTeamOpen] = useState(false);
 
-  const isAdmin = currentUser?.role === 'admin';
+  const isSuperAdmin = isSuperAdminUser(currentUser);
+  const isAdmin = isSuperAdmin || currentUser?.role === 'admin';
+  const roleDisplay = getUserRoleDisplay(currentUser);
 
   return (
     <>
@@ -39,10 +42,8 @@ export function Header() {
                   </span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <span className={`text-[9px] font-extrabold uppercase px-1.5 py-0.2 rounded ${
-                    isAdmin ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'
-                  }`}>
-                    {isAdmin ? '👑 Admin' : '💼 Agent'}
+                  <span className={`text-[9px] font-extrabold uppercase px-1.5 py-0.2 rounded ${roleDisplay.tagClass}`}>
+                    {roleDisplay.label}
                   </span>
                 </div>
               </div>

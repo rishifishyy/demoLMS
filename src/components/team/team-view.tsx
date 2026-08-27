@@ -26,7 +26,7 @@ import {
   Camera,
   Lock
 } from 'lucide-react';
-import { getDefaultAvatar, compressImageFile } from '@/lib/utils';
+import { getDefaultAvatar, compressImageFile, isSuperAdminUser, getUserRoleDisplay } from '@/lib/utils';
 
 export function TeamManagementView() {
   const { 
@@ -58,7 +58,8 @@ export function TeamManagementView() {
   const [successMsg, setSuccessMsg] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const isAdmin = currentUser?.role === 'admin';
+  const isSuperAdmin = isSuperAdminUser(currentUser);
+  const isAdmin = isSuperAdmin || currentUser?.role === 'admin';
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value.replace(/\D/g, '').slice(0, 10);
@@ -569,14 +570,26 @@ export function TeamManagementView() {
 
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">Access Role *</label>
-              <select
-                value={role}
-                onChange={(e) => setRole(e.target.value as any)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-800 focus:outline-none focus:border-blue-500 cursor-pointer"
-              >
-                <option value="salesperson">💼 Team Agent (Only assigned leads)</option>
-                <option value="admin">👑 Admin (Full company access)</option>
-              </select>
+              {isSuperAdmin ? (
+                <select
+                  value={role}
+                  onChange={(e) => setRole(e.target.value as any)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-800 focus:outline-none focus:border-blue-500 cursor-pointer"
+                >
+                  <option value="salesperson">💼 Team Agent (Only assigned leads)</option>
+                  <option value="admin">🛡️ Admin (Manager - Can manage agents & reports)</option>
+                </select>
+              ) : (
+                <div>
+                  <input
+                    type="text"
+                    disabled
+                    value="💼 Team Agent (Salesperson)"
+                    className="w-full bg-slate-100 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-600 cursor-not-allowed"
+                  />
+                  <p className="text-[10px] text-slate-400 mt-1">Only the Super Admin can register new Admins</p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -624,10 +637,12 @@ export function TeamManagementView() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {users.map((u) => {
-            const isUserAdmin = u.role === 'admin';
+            const isUserSuperAdmin = isSuperAdminUser(u);
+            const isUserAdmin = u.role === 'admin' || isUserSuperAdmin;
             const isSelf = u.id === currentUser?.id;
-            const canEdit = isSelf || (isAdmin && !isUserAdmin);
-            const canDelete = isAdmin && !isSelf && !isUserAdmin;
+            const canEdit = isSelf || isSuperAdmin || (isAdmin && !isUserAdmin);
+            const canDelete = !isSelf && !isUserSuperAdmin && (isSuperAdmin || (isAdmin && !isUserAdmin));
+            const roleDisplay = getUserRoleDisplay(u);
             const memberLeadsCount = leads.filter(l => !l.isArchived && l.assignedTo === u.id).length;
 
             return (
@@ -642,16 +657,10 @@ export function TeamManagementView() {
                     className="w-12 h-12 rounded-2xl object-cover border-2 border-slate-100 shadow-xs shrink-0"
                   />
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <h4 className="font-bold text-slate-900 text-sm truncate">{u.name}</h4>
-                      <span
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                          isUserAdmin
-                            ? 'bg-blue-100 text-blue-800 border border-blue-200'
-                            : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-                        }`}
-                      >
-                        {isUserAdmin ? 'Admin' : 'Agent'}
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${roleDisplay.tagClass}`}>
+                        {roleDisplay.label}
                       </span>
                       {isSelf && (
                         <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
@@ -686,7 +695,7 @@ export function TeamManagementView() {
                     {isAdmin && u.phone && (
                       <a
                         href={`https://wa.me/91${u.phone.replace(/\D/g, '').slice(-10)}?text=${encodeURIComponent(
-                          `🎉 *WELCOME TO HAPPYLMS CRM*\n\nHello *${u.name}*,\n\nYou have been added to HappyLMS CRM as a *${u.role === 'admin' ? 'Admin' : 'Team Agent'}*!\n\n🔗 *Login Portal:* https://happy-lms.vercel.app/login\n📧 *Email:* ${u.email}\n📱 *WhatsApp Number:* +91 ${u.phone}\n\nLog in now to view your assigned leads and manage property inquiries.`
+                          `🎉 *WELCOME TO HAPPYLMS CRM*\n\nHello *${u.name}*,\n\nYou have been added to HappyLMS CRM as a *${isUserSuperAdmin ? 'Super Admin' : u.role === 'admin' ? 'Admin' : 'Team Agent'}*!\n\n🔗 *Login Portal:* https://happy-lms.vercel.app/login\n📧 *Email:* ${u.email}\n📱 *WhatsApp Number:* +91 ${u.phone}\n\nLog in now to view your assigned leads and manage property inquiries.`
                         )}`}
                         target="_blank"
                         rel="noreferrer"
@@ -711,7 +720,7 @@ export function TeamManagementView() {
                       </button>
                     )}
 
-                    {/* Edit Button (Only self or admin editing agents) */}
+                    {/* Edit Button */}
                     {canEdit && (
                       <button
                         onClick={() => handleStartEdit(u)}
@@ -722,7 +731,7 @@ export function TeamManagementView() {
                       </button>
                     )}
 
-                    {/* Offboard / Remove Button (Admin only on agents) */}
+                    {/* Offboard / Remove Button */}
                     {canDelete && (
                       <button
                         type="button"
@@ -734,8 +743,16 @@ export function TeamManagementView() {
                       </button>
                     )}
 
+                    {/* Protected Super Admin indicator */}
+                    {isUserSuperAdmin && !isSelf && (
+                      <span className="inline-flex items-center justify-center gap-1 bg-purple-50 text-purple-700 text-[10px] font-bold py-2 px-2.5 rounded-xl border border-purple-200 col-span-2 sm:col-span-1">
+                        <Lock className="w-3 h-3 text-purple-500" />
+                        <span>Super Admin</span>
+                      </span>
+                    )}
+
                     {/* Protected Admin indicator when another admin views */}
-                    {isUserAdmin && !isSelf && (
+                    {!isUserSuperAdmin && isUserAdmin && !isSelf && !isSuperAdmin && (
                       <span className="inline-flex items-center justify-center gap-1 bg-slate-100 text-slate-500 text-[10px] font-bold py-2 px-2.5 rounded-xl border border-slate-200 col-span-2 sm:col-span-1">
                         <Lock className="w-3 h-3 text-slate-400" />
                         <span>Admin Protected</span>

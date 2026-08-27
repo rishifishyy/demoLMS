@@ -55,10 +55,27 @@ export function getFollowupCategory(dateStr: string | null | undefined): 'overdu
   return 'upcoming';
 }
 
+export function isSuperAdminUser(user?: { email?: string; role?: string } | null): boolean {
+  if (!user) return false;
+  const email = (user.email || '').toLowerCase().trim();
+  return email === 'rishinehra1@gmail.com' || user.role === 'superadmin';
+}
+
+export function getUserRoleDisplay(user?: { email?: string; role?: string } | null): { label: string; tagClass: string } {
+  if (!user) return { label: 'Guest', tagClass: 'bg-slate-100 text-slate-700' };
+  if (isSuperAdminUser(user)) {
+    return { label: '👑 Super Admin', tagClass: 'bg-purple-100 text-purple-800 border border-purple-200' };
+  }
+  if (user.role === 'admin') {
+    return { label: '🛡️ Admin', tagClass: 'bg-blue-100 text-blue-800 border border-blue-200' };
+  }
+  return { label: '💼 Agent', tagClass: 'bg-emerald-100 text-emerald-800 border border-emerald-200' };
+}
+
 export function getDefaultAvatar(name: string, role?: string): string {
   const cleanName = (name || 'User').trim();
   const safeName = encodeURIComponent(cleanName);
-  const bg = role === 'admin' ? '1d4ed8' : '0d9488'; // Vibrant Blue for Admin, Emerald for Agent
+  const bg = role === 'admin' || role === 'superadmin' ? '1d4ed8' : '0d9488'; // Vibrant Blue for Admin, Emerald for Agent
   return `https://ui-avatars.com/api/?name=${safeName}&background=${bg}&color=ffffff&bold=true&size=160&font-size=0.38`;
 }
 

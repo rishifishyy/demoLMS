@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Lead, UserProfile, Project, LeadStatus, ActivityType } from './types';
 import { supabase, isSupabaseConfigured } from './supabase/client';
-import { getFollowupCategory, getDefaultAvatar } from './utils';
+import { getFollowupCategory, getDefaultAvatar, isSuperAdminUser } from './utils';
 
 export const INITIAL_PROJECTS: Project[] = [
   {
@@ -620,8 +620,19 @@ export function LMSProvider({ children }: { children: React.ReactNode }) {
   ): Promise<{ success?: boolean; error?: string }> => {
     try {
       const targetUser = users.find(u => u.id === userId);
-      if (targetUser?.role === 'admin' && currentUser?.id !== userId) {
-        return { error: 'Security restriction: An admin cannot edit another admin\'s profile. Only the owner can edit their own profile.' };
+      const isSuper = isSuperAdminUser(currentUser);
+      const targetIsSuper = isSuperAdminUser(targetUser);
+
+      // Super Admin can edit anyone.
+      // Regular Admin can only edit self or salespersons.
+      // Salesperson can only edit self.
+      if (!isSuper) {
+        if (targetIsSuper && currentUser?.id !== userId) {
+          return { error: 'Security restriction: Only the Super Admin can edit Super Admin accounts.' };
+        }
+        if (targetUser?.role === 'admin' && currentUser?.id !== userId) {
+          return { error: 'Security restriction: Only the Super Admin can edit other Admin profiles.' };
+        }
       }
 
       const trimmedName = data.name.trim();
@@ -728,12 +739,24 @@ export function LMSProvider({ children }: { children: React.ReactNode }) {
   ): Promise<{ success?: boolean; error?: string }> => {
     try {
       if (currentUser?.id === userId) {
-        return { error: 'You cannot delete your own active Admin profile.' };
+        return { error: 'Self-deletion is blocked to protect your CRM account and leads data.' };
       }
 
       const targetUser = users.find(u => u.id === userId);
-      if (targetUser?.role === 'admin') {
-        return { error: 'Security restriction: Admin profiles cannot be deleted by other admins.' };
+      const isSuper = isSuperAdminUser(currentUser);
+      const targetIsSuper = isSuperAdminUser(targetUser);
+
+      if (targetIsSuper) {
+        return { error: 'Security restriction: The Super Admin account cannot be deleted.' };
+      }
+
+      if (!isSuper) {
+        if (targetUser?.role === 'admin') {
+          return { error: 'Security restriction: Only the Super Admin can remove another Admin.' };
+        }
+        if (currentUser?.role !== 'admin') {
+          return { error: 'Security restriction: Only Admins can remove team members.' };
+        }
       }
 
       if (isSupabaseConfigured) {

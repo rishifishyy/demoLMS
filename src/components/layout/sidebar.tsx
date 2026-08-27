@@ -3,10 +3,12 @@
 import React from 'react';
 import { useLMS } from '@/lib/store';
 import { LayoutDashboard, Users, Zap, BarChart3, Building2, LogOut, Trash2, UserCheck } from 'lucide-react';
+import { getUserRoleDisplay } from '@/lib/utils';
 
 export function Sidebar() {
   const { activeTab, setActiveTab, getMetrics, currentUser, logout, leads } = useLMS();
   const metrics = getMetrics();
+  const roleDisplay = getUserRoleDisplay(currentUser);
 
   const isSalesperson = currentUser?.role === 'salesperson';
   const trashCount = leads.filter(l => {
@@ -106,8 +108,8 @@ export function Sidebar() {
               />
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-bold text-slate-900 truncate">{currentUser.name}</p>
-                <span className="inline-block px-1.5 py-0.2 text-[9px] font-bold uppercase rounded bg-blue-100 text-blue-700">
-                  {currentUser.role === 'admin' ? 'Admin' : 'Agent'}
+                <span className={`inline-block px-1.5 py-0.2 text-[9px] font-bold uppercase rounded ${roleDisplay.tagClass}`}>
+                  {roleDisplay.label}
                 </span>
               </div>
             </div>
