@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client';
-import { Building2, Lock, AlertCircle, ArrowRight, CheckCircle2, Eye, EyeOff } from 'lucide-react';
+import { Building2, Lock, AlertCircle, ArrowRight, CheckCircle2, Eye, EyeOff, Loader2 } from 'lucide-react';
 
 export default function ResetPasswordPage() {
   const router = useRouter();
@@ -13,6 +13,40 @@ export default function ResetPasswordPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [sessionReady, setSessionReady] = useState(false);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+
+    // Check if recovery code is present in URL
+    const checkRecovery = async () => {
+      try {
+        if (typeof window !== 'undefined') {
+          const searchParams = new URLSearchParams(window.location.search);
+          const code = searchParams.get('code');
+          if (code) {
+            await supabase.auth.exchangeCodeForSession(code);
+          }
+        }
+      } catch (err) {
+        console.warn('Recovery session exchange error:', err);
+      } finally {
+        setSessionReady(true);
+      }
+    };
+
+    checkRecovery();
+
+    const { data: listener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'PASSWORD_RECOVERY' || session) {
+        setSessionReady(true);
+      }
+    });
+
+    return () => {
+      listener?.subscription?.unsubscribe();
+    };
+  }, []);
 
   const handleReset = async (e: React.FormEvent) => {
     e.preventDefault();

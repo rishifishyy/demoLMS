@@ -35,13 +35,17 @@ export default function LoginPage() {
       } else {
         // Forgot Password Flow
         if (isSupabaseConfigured) {
+          const redirectUrl = typeof window !== 'undefined' && window.location.origin
+            ? `${window.location.origin}/reset-password`
+            : 'https://happy-lms.vercel.app/reset-password';
+
           const { error: resetErr } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-            redirectTo: typeof window !== 'undefined' ? window.location.origin + '/reset-password' : undefined
+            redirectTo: redirectUrl
           });
           if (resetErr) {
             setError(resetErr.message);
           } else {
-            setSuccessMsg('Password reset link sent! Check your Gmail inbox.');
+            setSuccessMsg('✓ Password reset link sent! Please check your email inbox.');
           }
         } else {
           setError('Database connection error');
