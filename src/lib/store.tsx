@@ -80,6 +80,8 @@ interface LMSContextType {
   triggerCall: (leadId: string) => void;
   triggerWhatsApp: (leadId: string) => void;
   exportCSV: () => void;
+  updateUserProfile: (userId: string, data: { name: string; phone: string; role: 'admin' | 'salesperson' }) => Promise<{ success?: boolean; error?: string }>;
+  refreshTeam: () => Promise<void>;
 
   getFilteredLeads: () => Lead[];
   getMetrics: () => {
@@ -558,26 +560,102 @@ export function LMSProvider({ children }: { children: React.ReactNode }) {
     const filtered = getFilteredLeads();
     const headers = ['Lead ID', 'Name', 'Mobile', 'WhatsApp', 'Project', 'Source', 'Assigned To', 'Status', 'Last Contacted', 'Next Followup', 'Latest Remark'];
     const rows = filtered.map(l => [
-      '"' + l.id + '"',
-      '"' + l.name.replace(/"/g, '""') + '"',
-      '"' + l.mobile + '"',
-      '"' + (l.whatsapp || '') + '"',
-      '"' + (projects.find(p => p.id === l.projectId)?.name || '') + '"',
-      '"' + l.source + '"',
-      '"' + (users.find(u => u.id === l.assignedTo)?.name || '') + '"',
-      '"' + l.status + '"',
+      '"' + (l.id || '').replace(/"/g, '""') + '"',
+      '"' + (l.name || '').replace(/"/g, '""') + '"',
+      '"' + (l.mobile || '').replace(/"/g, '""') + '"',
+      '"' + (l.whatsapp || '').replace(/"/g, '""') + '"',
+      '"' + (projects.find(p => p.id === l.projectId)?.name || '').replace(/"/g, '""') + '"',
+      '"' + (l.source || '').replace(/"/g, '""') + '"',
+      '"' + (users.find(u => u.id === l.assignedTo)?.name || '').replace(/"/g, '""') + '"',
+      '"' + (l.status || '').replace(/"/g, '""') + '"',
       '"' + (l.lastContacted || '') + '"',
       '"' + (l.nextFollowup || '') + '"',
-      '"' + (l.latestRemark || '').replace(/"/g, '""') + '"'
+      '"' + (l.latestRemark || '').replace(/"/g, '""').replace(/\n/g, ' ') + '"'
     ]);
 
-    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(e => e.join(','))].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.setAttribute('href', encodeURI(csvContent));
-    link.setAttribute('download', 'HappyLMS_Leads.csv');
+    link.href = url;
+    link.setAttribute('download', `HappyLMS_Leads_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const refreshTeam = async () => {
+    if (!isSupabaseConfigured) return;
+    try {
+      const { data: cloudProfiles } = await supabase.from('profiles').select('*');
+      if (cloudProfiles) {
+        setUsers(cloudProfiles.map((p: any) => ({
+          id: p.id,
+          name: p.full_name,
+          email: p.email,
+          role: p.role,
+          phone: p.phone || '',
+          avatar: p.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80'
+        })));
+      }
+    } catch (e) {
+      console.error('Error refreshing team profiles:', e);
+    }
+  };
+
+  const updateUserProfile = async (
+    userId: string,
+    data: { name: string; phone: string; role: 'admin' | 'salesperson' }
+  ): Promise<{ success?: boolean; error?: string }> => {
+    try {
+      const trimmedName = data.name.trim();
+      const trimmedPhone = data.phone.trim();
+      const role = data.role;
+
+      if (isSupabaseConfigured) {
+        const { error: updateErr, data: updatedData } = await supabase
+          .from('profiles')
+          .update({
+            full_name: trimmedName,
+            phone: trimmedPhone || null,
+            role: role
+          })
+          .eq('id', userId)
+          .select();
+
+        if (updateErr) {
+          console.error('Supabase profile update error:', updateErr);
+          return { error: updateErr.message };
+        }
+
+        if (!updatedData || updatedData.length === 0) {
+          console.warn('Update returned 0 rows. Please verify Supabase RLS policy on public.profiles table.');
+        }
+      }
+
+      // Immediately update local React state for instantaneous UI sync
+      setUsers(prev =>
+        prev.map(u =>
+          u.id === userId
+            ? { ...u, name: trimmedName, phone: trimmedPhone, role: role }
+            : u
+        )
+      );
+
+      if (currentUser?.id === userId) {
+        setCurrentUser(prev =>
+          prev
+            ? { ...prev, name: trimmedName, phone: trimmedPhone, role: role }
+            : null
+        );
+      }
+
+      return { success: true };
+    } catch (err: any) {
+      console.error('Catch error during profile update:', err);
+      return { error: err.message || 'Failed to update user profile' };
+    }
   };
 
   const getFilteredLeads = () => {
@@ -698,6 +776,8 @@ export function LMSProvider({ children }: { children: React.ReactNode }) {
         triggerCall,
         triggerWhatsApp,
         exportCSV,
+        updateUserProfile,
+        refreshTeam,
         getFilteredLeads,
         getMetrics
       }}

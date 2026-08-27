@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 
 export function TeamManagementView() {
-  const { users, currentUser } = useLMS();
+  const { users, currentUser, updateUserProfile, refreshTeam } = useLMS();
 
   const [isAddingUser, setIsAddingUser] = useState(false);
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
@@ -69,18 +69,36 @@ export function TeamManagementView() {
     setError('');
     setSuccessMsg('');
 
-    if (!name.trim()) {
+    const trimmedName = name.trim();
+    const trimmedEmail = email.trim().toLowerCase();
+    const trimmedPhone = phone.trim();
+
+    if (!trimmedName) {
       setError('Please enter full name');
       return;
     }
 
-    if (!email.trim() || !email.includes('@')) {
-      setError('Please enter a valid email address');
+    if (!trimmedEmail || !trimmedEmail.includes('@') || !trimmedEmail.includes('.')) {
+      setError('Email address is mandatory for login and receiving lead notifications.');
       return;
     }
 
-    if (phone && phone.length !== 10) {
-      setError('Please enter a valid 10-digit WhatsApp phone number');
+    if (!trimmedPhone) {
+      setError('WhatsApp Mobile number is mandatory so team members can receive 1-tap lead updates.');
+      return;
+    }
+
+    if (trimmedPhone.length !== 10) {
+      setError('Please enter a valid 10-digit WhatsApp phone number (e.g. 9876543210)');
+      return;
+    }
+
+    // Check duplicate in local team state
+    const isEmailTakenLocal = users.some(
+      (u) => u.email.toLowerCase() === trimmedEmail && u.id !== editingUserId
+    );
+    if (isEmailTakenLocal) {
+      setError(`A team member with email "${email.trim()}" already exists in the team.`);
       return;
     }
 
@@ -88,65 +106,106 @@ export function TeamManagementView() {
 
     try {
       if (editingUserId) {
-        // Update user profile in Supabase
-        if (isSupabaseConfigured) {
-          const { error: updateErr } = await supabase
-            .from('profiles')
-            .update({
-              full_name: name.trim(),
-              phone: phone.trim() || null,
-              role: role
-            })
-            .eq('id', editingUserId);
+        // Update user profile
+        const res = await updateUserProfile(editingUserId, {
+          name: trimmedName,
+          phone: trimmedPhone,
+          role: role
+        });
 
-          if (updateErr) throw updateErr;
+        if (res.error) {
+          setError(res.error);
+          setLoading(false);
+          return;
         }
 
-        setSuccessMsg(`✓ Updated profile for ${name}! Reloading...`);
+        setSuccessMsg(`✓ Successfully updated profile for ${trimmedName}!`);
+        setTimeout(() => {
+          setIsAddingUser(false);
+          setEditingUserId(null);
+        }, 1000);
       } else {
         // Add new member
+        if (!password || password.length < 6) {
+          setError('Please set an initial login password of at least 6 characters for the new member');
+          setLoading(false);
+          return;
+        }
+
         if (isSupabaseConfigured) {
-          if (!password || password.length < 6) {
-            setError('Please set an initial password of at least 6 characters for the new member');
+          const { data: existingProfiles } = await supabase
+            .from('profiles')
+            .select('id, email')
+            .eq('email', trimmedEmail);
+
+          if (existingProfiles && existingProfiles.length > 0) {
+            setError(`A team member with email "${email.trim()}" is already registered in the system.`);
             setLoading(false);
             return;
           }
 
-          const { data: authData, error: signupErr } = await supabase.auth.signUp({
-            email: email.trim(),
+          const { createClient } = await import('@supabase/supabase-js');
+          const authClient = createClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
+            {
+              auth: {
+                persistSession: false,
+                autoRefreshToken: false,
+                detectSessionInUrl: false
+              }
+            }
+          );
+
+          const { data: authData, error: signupErr } = await authClient.auth.signUp({
+            email: trimmedEmail,
             password: password,
             options: {
               data: {
-                name: name.trim(),
+                full_name: trimmedName,
                 role: role,
-                phone: phone.trim() || null
+                phone: trimmedPhone || null
               }
             }
           });
 
-          if (signupErr) throw signupErr;
+          if (signupErr) {
+            if (signupErr.message.toLowerCase().includes('already registered') || signupErr.message.toLowerCase().includes('already exists')) {
+              setError(`A user with email "${email.trim()}" already exists in Supabase Auth.`);
+              setLoading(false);
+              return;
+            }
+            throw signupErr;
+          }
+
+          if (authData?.user && authData.user.identities && authData.user.identities.length === 0) {
+            setError(`A user with email "${email.trim()}" already exists in the system.`);
+            setLoading(false);
+            return;
+          }
 
           if (authData?.user) {
-            await supabase.from('profiles').upsert({
+            const { error: profileErr } = await supabase.from('profiles').upsert({
               id: authData.user.id,
-              full_name: name.trim(),
-              email: email.trim(),
+              full_name: trimmedName,
+              email: trimmedEmail,
               role: role,
-              phone: phone.trim() || null,
+              phone: trimmedPhone || null,
               avatar_url: role === 'admin' ? '/admin-avatar.png' : '/agent-avatar.png'
             });
+
+            if (profileErr) throw profileErr;
           }
+
+          await refreshTeam();
         }
 
-        setSuccessMsg(`✓ New ${role === 'admin' ? 'Admin' : 'Team Agent'} ${name} added successfully! Reloading...`);
+        setSuccessMsg(`✓ New ${role === 'admin' ? 'Admin' : 'Team Agent'} "${trimmedName}" created successfully!`);
+        setTimeout(() => {
+          setIsAddingUser(false);
+          setEditingUserId(null);
+        }, 1200);
       }
-
-      setTimeout(() => {
-        setIsAddingUser(false);
-        setEditingUserId(null);
-        window.location.reload();
-      }, 1500);
-
     } catch (err: any) {
       setError(err.message || 'Failed to save team member');
     } finally {
@@ -225,7 +284,9 @@ export function TeamManagementView() {
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">Email Address *</label>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                Email Address * <span className="text-blue-600 font-semibold">(Mandatory for Login & Alerts)</span>
+              </label>
               <input
                 type="email"
                 required
@@ -241,7 +302,7 @@ export function TeamManagementView() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">
-                WhatsApp Phone Number <span className="text-emerald-600 font-bold">(For 1-Tap Alerts)</span>
+                WhatsApp Mobile Number * <span className="text-emerald-600 font-bold">(Mandatory for Alerts)</span>
               </label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-emerald-600">
@@ -249,6 +310,7 @@ export function TeamManagementView() {
                 </span>
                 <input
                   type="tel"
+                  required
                   inputMode="numeric"
                   placeholder="9876543210"
                   value={phone}
@@ -256,7 +318,7 @@ export function TeamManagementView() {
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-11 pr-3 py-2.5 text-xs text-slate-900 font-mono font-bold tracking-wider focus:outline-none focus:border-emerald-500 focus:bg-white"
                 />
               </div>
-              <p className="text-[10px] text-slate-400 mt-1">Lead alerts will open this exact number on WhatsApp</p>
+              <p className="text-[10px] text-slate-500 mt-1">Lead alerts & 1-tap WhatsApp notifications will open this number</p>
             </div>
 
             <div>
