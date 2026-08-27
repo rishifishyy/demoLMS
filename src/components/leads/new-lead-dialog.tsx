@@ -133,8 +133,8 @@ export function NewLeadDialog() {
         {/* Header */}
         <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50 shrink-0">
           <div>
-            <h3 className="font-bold text-slate-900 text-base sm:text-lg">Register New Lead</h3>
-            <p className="text-xs text-slate-500">Add an interested property buyer into your CRM pipeline</p>
+            <h3 className="font-bold text-slate-900 text-base sm:text-lg">Add New Customer Lead</h3>
+            <p className="text-xs text-slate-500">Enter customer details and property inquiry</p>
           </div>
           <button
             onClick={closeNewLeadModal}

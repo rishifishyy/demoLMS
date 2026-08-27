@@ -59,34 +59,34 @@ export function SalesReports() {
   // Funnel Stage Data
   const funnelStages = [
     {
-      stage: '1. Inquiries Captured',
+      stage: '1. Total Inquiries Received',
       count: total,
       pct: 100,
       gradient: 'from-blue-600 to-indigo-600',
       bgLight: 'bg-blue-50',
       textColor: 'text-blue-700',
       borderColor: 'border-blue-200',
-      desc: isSalesperson ? 'Assigned to your pipeline' : 'Total leads captured in company'
+      desc: isSalesperson ? 'Leads assigned to you' : 'Total leads received'
     },
     {
-      stage: '2. Contacted / Engaged',
+      stage: '2. Spoke With Customer',
       count: contactedCount > 0 ? contactedCount : 0,
       pct: total > 0 ? Math.round((contactedCount / total) * 100) : 0,
       gradient: 'from-cyan-500 to-blue-600',
       bgLight: 'bg-cyan-50',
       textColor: 'text-cyan-700',
       borderColor: 'border-cyan-200',
-      desc: 'Spoke on call or WhatsApp'
+      desc: 'Spoke on Call or WhatsApp'
     },
     {
-      stage: '3. Qualified Interested',
+      stage: '3. Interested / Hot Buyers',
       count: qualifiedCount,
       pct: total > 0 ? Math.round((qualifiedCount / total) * 100) : 0,
       gradient: 'from-emerald-500 to-teal-600',
       bgLight: 'bg-emerald-50',
       textColor: 'text-emerald-700',
       borderColor: 'border-emerald-200',
-      desc: 'Hot buyers & quotes sent'
+      desc: 'Interested buyers & price sent'
     },
     {
       stage: '4. Site Visits Done',
@@ -96,7 +96,7 @@ export function SalesReports() {
       bgLight: 'bg-purple-50',
       textColor: 'text-purple-700',
       borderColor: 'border-purple-200',
-      desc: 'Completed on-site inspections'
+      desc: 'Completed property site visits'
     }
   ];
 
@@ -122,13 +122,13 @@ export function SalesReports() {
           <div className="flex items-center gap-2">
             <BarChart2 className="w-5 h-5 text-blue-600" />
             <h3 className="font-bold text-slate-900 text-base sm:text-lg">
-              {isAdmin ? 'Visual Sales Analytics & Conversion Funnel' : 'My Personal Performance & Funnel'}
+              {isAdmin ? 'Sales Performance & Lead Progress' : 'My Performance & Leads Progress'}
             </h3>
           </div>
           <p className="text-xs text-slate-500 mt-0.5">
             {isAdmin 
-              ? 'Company-wide pipeline drop-offs, lead source attribution & salesperson drilldown'
-              : 'Real-time tracking of your assigned leads, conversion rate and outreach milestones'
+              ? 'Overall company leads, where they came from & team performance'
+              : 'Real-time tracking of your assigned leads, calls and site visits'
             }
           </p>
         </div>
@@ -277,7 +277,7 @@ export function SalesReports() {
           {/* Funnel Stage Summary Cards */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-3 border-t border-slate-100">
             <div className="bg-slate-50 p-2.5 rounded-xl text-center border border-slate-100">
-              <span className="text-[10px] font-bold text-slate-400 block uppercase">New Inquiries</span>
+              <span className="text-[10px] font-bold text-slate-400 block uppercase">New Leads</span>
               <span className="text-sm font-black text-blue-600">{newCount}</span>
             </div>
             <div className="bg-slate-50 p-2.5 rounded-xl text-center border border-slate-100">
@@ -285,11 +285,11 @@ export function SalesReports() {
               <span className="text-sm font-black text-amber-600">{notPickedCount}</span>
             </div>
             <div className="bg-slate-50 p-2.5 rounded-xl text-center border border-slate-100">
-              <span className="text-[10px] font-bold text-slate-400 block uppercase">Interested</span>
+              <span className="text-[10px] font-bold text-slate-400 block uppercase">Interested Buyers</span>
               <span className="text-sm font-black text-emerald-600">{interestedCount}</span>
             </div>
             <div className="bg-slate-50 p-2.5 rounded-xl text-center border border-slate-100">
-              <span className="text-[10px] font-bold text-slate-400 block uppercase">Site Visits</span>
+              <span className="text-[10px] font-bold text-slate-400 block uppercase">Site Visits Done</span>
               <span className="text-sm font-black text-purple-600">{visitCount}</span>
             </div>
           </div>
@@ -301,9 +301,9 @@ export function SalesReports() {
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <PieChart className="w-4 h-4 text-emerald-600" />
-                <h4 className="font-bold text-slate-900 text-sm">Leads by Acquisition Channel</h4>
+                <h4 className="font-bold text-slate-900 text-sm">Where Leads Came From (Source)</h4>
               </div>
-              <span className="text-xs text-slate-400 font-semibold">{Object.keys(sourceMap).length} Channels</span>
+              <span className="text-xs text-slate-400 font-semibold">{Object.keys(sourceMap).length} Sources</span>
             </div>
 
             {/* Visual Colored Channel Progress Bars */}
@@ -344,8 +344,8 @@ export function SalesReports() {
             <span className="text-sm">💡</span>
             <p>
               {isSalesperson 
-                ? 'Keep your conversion rate high by completing site visits for qualified buyers!'
-                : 'Track which channel produces the highest site visits to optimize your ad spend.'
+                ? 'Keep your success high by completing site visits for interested buyers!'
+                : 'Track which sources bring the most site visits to focus your advertising.'
               }
             </p>
           </div>
@@ -359,22 +359,22 @@ export function SalesReports() {
             <div className="flex items-center gap-2">
               <Users className="w-4 h-4 text-purple-600" />
               <h4 className="font-bold text-slate-900 text-sm sm:text-base">
-                Sales Team Performance Leaderboard (Admin Access)
+                Team Performance & Deals Summary (Admin View)
               </h4>
             </div>
-            <span className="text-xs text-slate-500 font-semibold">{salesTeam.length} Active Members</span>
+            <span className="text-xs text-slate-500 font-semibold">{salesTeam.length} Team Members</span>
           </div>
 
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[11px]">
-                  <th className="py-3.5 px-4">Salesperson</th>
+                  <th className="py-3.5 px-4">Team Member</th>
                   <th className="py-3.5 px-4">Assigned Leads</th>
-                  <th className="py-3.5 px-4">Calls Logged</th>
+                  <th className="py-3.5 px-4">Calls Done</th>
                   <th className="py-3.5 px-4">Site Visits</th>
                   <th className="py-3.5 px-4">Interested Deals</th>
-                  <th className="py-3.5 px-4">Conversion Rate</th>
+                  <th className="py-3.5 px-4">Success Rate</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">

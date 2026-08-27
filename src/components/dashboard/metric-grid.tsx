@@ -24,37 +24,37 @@ export function MetricGrid() {
 
   const cards = [
     {
-      title: isSalesperson ? 'My Active Pipeline' : 'Total Active Pipeline',
+      title: isSalesperson ? 'My Total Leads' : 'Total Leads',
       value: metrics.total,
       icon: Users,
-      trend: isSalesperson ? 'Assigned directly to you' : 'Across all properties',
+      trend: isSalesperson ? 'Leads in your list' : 'All properties combined',
       color: 'text-blue-600',
       bgColor: 'bg-blue-50',
       borderColor: 'border-blue-100'
     },
     {
-      title: 'Urgent Due Today',
+      title: 'Calls Due Today',
       value: metrics.todayFollowups,
       icon: Zap,
-      trend: metrics.todayFollowups > 0 ? 'Action required today' : 'All clear for today',
+      trend: metrics.todayFollowups > 0 ? 'Need to call today' : 'All done for today',
       color: 'text-amber-600',
       bgColor: 'bg-amber-50',
       borderColor: 'border-amber-100'
     },
     {
-      title: 'Overdue Follow-ups',
+      title: 'Missed Follow-ups',
       value: metrics.overdueFollowups,
       icon: Clock,
-      trend: metrics.overdueFollowups > 0 ? 'Requires immediate dial' : '0 delayed calls',
+      trend: metrics.overdueFollowups > 0 ? 'Pending / Late calls' : '0 pending calls',
       color: 'text-rose-600',
       bgColor: 'bg-rose-50',
       borderColor: 'border-rose-100'
     },
     {
-      title: isSalesperson ? 'My Qualified Deals' : 'Interested / Qualified',
+      title: isSalesperson ? 'Interested / Visits' : 'Hot & Site Visits',
       value: (metrics.interested + metrics.visitDone),
       icon: CheckCircle2,
-      trend: isSalesperson ? `${myVisits} site visits completed` : 'High intent buyers',
+      trend: isSalesperson ? `${myVisits} site visits completed` : 'Interested buyers',
       color: 'text-emerald-600',
       bgColor: 'bg-emerald-50',
       borderColor: 'border-emerald-100'

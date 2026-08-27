@@ -62,10 +62,10 @@ export default function Home() {
                     </div>
                     <div>
                       <h4 className="text-xs font-bold text-rose-900 leading-tight">
-                        {urgentCount} Follow-ups Require Action ({metrics.overdueFollowups} Overdue, {metrics.todayFollowups} Due Today)
+                        {urgentCount} Calls Pending ({metrics.overdueFollowups} Missed, {metrics.todayFollowups} Due Today)
                       </h4>
                       <p className="text-[10px] sm:text-[11px] text-rose-700">
-                        Reach out to pending buyers to advance deals.
+                        Call pending property buyers today to schedule visits.
                       </p>
                     </div>
                   </div>
@@ -73,7 +73,7 @@ export default function Home() {
                     onClick={() => setActiveTab('queue')}
                     className="self-end sm:self-auto inline-flex items-center gap-1 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-xs cursor-pointer"
                   >
-                    <span>Dialer Queue</span>
+                    <span>View Today's Calls</span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </button>
                 </div>

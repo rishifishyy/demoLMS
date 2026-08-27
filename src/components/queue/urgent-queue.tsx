@@ -29,9 +29,9 @@ export function UrgentQueue() {
   return (
     <div className="space-y-4">
       <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs">
-        <h3 className="font-bold text-slate-900 text-base mb-1">⚡ Priority Follow-up & Dialer Queue</h3>
+        <h3 className="font-bold text-slate-900 text-base mb-1">⚡ Today's Calls & Follow-up List</h3>
         <p className="text-xs text-slate-500">
-          Streamlined workflow for rapid phone outreach on overdue and today's scheduled appointments.
+          Calls you need to make today and missed follow-ups with property buyers.
         </p>
       </div>
 

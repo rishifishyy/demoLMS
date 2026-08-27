@@ -211,7 +211,7 @@ export function LeadDrawer() {
 
           {/* Status Progression Chips */}
           <div className="space-y-2">
-            <label className="block text-xs font-bold text-slate-700">Update Lead Stage:</label>
+            <label className="block text-xs font-bold text-slate-700">Update Lead Status:</label>
             <div className="grid grid-cols-3 gap-1.5">
               {(['New Lead', 'Interested', 'Visit Done', 'Not Picked', 'Not Interested', 'Junk'] as LeadStatus[]).map(
                 (st) => {
@@ -237,7 +237,7 @@ export function LeadDrawer() {
 
           {/* Add Remark & Follow-up Form */}
           <form onSubmit={handleAddRemark} className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 space-y-3">
-            <label className="block text-xs font-bold text-slate-700">Log Note or Discussion:</label>
+            <label className="block text-xs font-bold text-slate-700">Call Notes & Remarks:</label>
             <textarea
               rows={2}
               placeholder="e.g. Discussed plot pricing, customer wants site visit next Sunday."

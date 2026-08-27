@@ -16,24 +16,27 @@ export function Sidebar() {
   }).length;
 
   const navItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'leads', label: 'Leads', icon: Users },
+    { id: 'dashboard', label: 'Dashboard', shortLabel: 'Home', icon: LayoutDashboard },
+    { id: 'leads', label: 'All Leads', shortLabel: 'Leads', icon: Users },
     {
       id: 'queue',
-      label: 'Urgent Queue',
+      label: "Today's Calls",
+      shortLabel: 'Calls',
       icon: Zap,
       badgeToday: metrics.todayFollowups,
       badgeOverdue: metrics.overdueFollowups
     },
-    { id: 'reports', label: 'Reports', icon: BarChart3 },
+    { id: 'reports', label: 'Sales Reports', shortLabel: 'Reports', icon: BarChart3 },
     {
       id: 'team',
-      label: 'Team & WhatsApp',
+      label: 'Team Members',
+      shortLabel: 'Team',
       icon: UserCheck
     },
     {
       id: 'trash',
-      label: 'Recycle Bin',
+      label: 'Deleted Leads',
+      shortLabel: 'Trash',
       icon: Trash2,
       badgeTrash: trashCount
     }
@@ -150,7 +153,7 @@ export function Sidebar() {
                   </span>
                 ) : null}
               </div>
-              <span className="mt-0.5 text-[8.5px] truncate max-w-[48px]">{item.label.split(' ')[0]}</span>
+              <span className="mt-0.5 text-[9px] font-bold truncate">{item.shortLabel}</span>
             </button>
           );
         })}
