@@ -655,6 +655,8 @@ export function TeamDialog({ isOpen, onClose }: TeamDialogProps) {
                 {users.map((u) => {
                   const isUserAdmin = u.role === 'admin';
                   const isSelf = u.id === currentUser?.id;
+                  const canEdit = isSelf || (isAdmin && !isUserAdmin);
+                  const canDelete = isAdmin && !isSelf && !isUserAdmin;
                   const memberLeadsCount = leads.filter(l => !l.isArchived && l.assignedTo === u.id).length;
 
                   return (
@@ -732,8 +734,8 @@ export function TeamDialog({ isOpen, onClose }: TeamDialogProps) {
                           </button>
                         )}
 
-                        {/* Edit Button (Admin can edit all, agent can edit self) */}
-                        {(isAdmin || isSelf) && (
+                        {/* Edit Button (Only self or admin editing agents) */}
+                        {canEdit && (
                           <button
                             onClick={() => handleStartEdit(u)}
                             className="inline-flex items-center justify-center gap-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-bold py-2 px-3 rounded-xl transition-all cursor-pointer"
@@ -743,8 +745,8 @@ export function TeamDialog({ isOpen, onClose }: TeamDialogProps) {
                           </button>
                         )}
 
-                        {/* Offboard / Remove Button (Admin only, cannot remove self) */}
-                        {isAdmin && !isSelf && (
+                        {/* Offboard / Remove Button (Admin only on agents) */}
+                        {canDelete && (
                           <button
                             type="button"
                             onClick={() => handleStartOffboarding(u)}
@@ -753,6 +755,14 @@ export function TeamDialog({ isOpen, onClose }: TeamDialogProps) {
                             <Trash2 className="w-3.5 h-3.5 text-rose-500" />
                             <span>Remove</span>
                           </button>
+                        )}
+
+                        {/* Protected Admin indicator when another admin views */}
+                        {isUserAdmin && !isSelf && (
+                          <span className="inline-flex items-center justify-center gap-1 bg-slate-100 text-slate-500 text-[10px] font-bold py-2 px-2.5 rounded-xl border border-slate-200 col-span-2 sm:col-span-1">
+                            <Lock className="w-3 h-3 text-slate-400" />
+                            <span>Admin Protected</span>
+                          </span>
                         )}
                       </div>
                     </div>

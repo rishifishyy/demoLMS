@@ -619,6 +619,11 @@ export function LMSProvider({ children }: { children: React.ReactNode }) {
     data: { name: string; phone: string; role: 'admin' | 'salesperson'; avatar?: string }
   ): Promise<{ success?: boolean; error?: string }> => {
     try {
+      const targetUser = users.find(u => u.id === userId);
+      if (targetUser?.role === 'admin' && currentUser?.id !== userId) {
+        return { error: 'Security restriction: An admin cannot edit another admin\'s profile. Only the owner can edit their own profile.' };
+      }
+
       const trimmedName = data.name.trim();
       const trimmedPhone = data.phone.trim();
       const role = data.role;
@@ -724,6 +729,11 @@ export function LMSProvider({ children }: { children: React.ReactNode }) {
     try {
       if (currentUser?.id === userId) {
         return { error: 'You cannot delete your own active Admin profile.' };
+      }
+
+      const targetUser = users.find(u => u.id === userId);
+      if (targetUser?.role === 'admin') {
+        return { error: 'Security restriction: Admin profiles cannot be deleted by other admins.' };
       }
 
       if (isSupabaseConfigured) {
