@@ -74,8 +74,12 @@ interface LMSContextType {
   recordActivity: (leadId: string, activity: { type: ActivityType; details: string; newStatus?: LeadStatus; scheduledFollowup?: string | null }) => Promise<void>;
   archiveLead: (leadId: string) => Promise<void>;
   deleteLead: (leadId: string) => Promise<void>;
+  bulkDeleteLeads: (leadIds: string[]) => Promise<void>;
+  bulkReassignLeads: (leadIds: string[], userId: string) => Promise<void>;
   restoreLead: (leadId: string) => Promise<void>;
+  bulkRestoreLeads: (leadIds: string[]) => Promise<void>;
   permanentDeleteLead: (leadId: string) => Promise<void>;
+  bulkPermanentDeleteLeads: (leadIds: string[]) => Promise<void>;
   emptyRecycleBin: () => Promise<void>;
   triggerCall: (leadId: string) => void;
   triggerWhatsApp: (leadId: string) => void;
@@ -500,6 +504,79 @@ export function LMSProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const bulkDeleteLeads = async (leadIds: string[]) => {
+    if (!leadIds || leadIds.length === 0) return;
+    const nowIso = new Date().toISOString();
+    const updated = leads.map(l => leadIds.includes(l.id) ? { ...l, isArchived: true, deletedAt: nowIso, updatedAt: nowIso } : l);
+    setLeads(updated);
+    closeLeadDrawer();
+
+    if (isSupabaseConfigured) {
+      try {
+        await supabase.from('leads').update({ is_archived: true, updated_at: nowIso }).in('lead_code', leadIds);
+      } catch (err) {
+        console.warn('Supabase bulk delete notice:', err);
+      }
+    }
+  };
+
+  const bulkReassignLeads = async (leadIds: string[], userId: string) => {
+    if (!leadIds || leadIds.length === 0) return;
+    const nowIso = new Date().toISOString();
+    const targetUser = users.find(u => u.id === userId);
+    const targetName = targetUser?.name || 'team member';
+
+    const updated = leads.map(l => {
+      if (!leadIds.includes(l.id)) return l;
+      return {
+        ...l,
+        assignedTo: userId,
+        updatedAt: nowIso,
+        timeline: [
+          {
+            id: 'ACT-' + l.id + '-' + Date.now(),
+            leadId: l.id,
+            userId: currentUser?.id || '',
+            type: 'Assignment' as ActivityType,
+            details: 'Reassigned to ' + targetName + ' (Bulk)',
+            previousStatus: l.status,
+            newStatus: l.status,
+            timestamp: nowIso
+          },
+          ...l.timeline
+        ]
+      };
+    });
+    setLeads(updated);
+
+    // Send ONE single consolidated notification email if assigning to another agent
+    try {
+      const isAssignedToSelf = userId === currentUser?.id;
+      if (!isAssignedToSelf && targetUser?.email) {
+        fetch('/api/notify-lead', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            agentEmail: targetUser.email,
+            agentName: targetUser.name,
+            isBulk: true,
+            leadCount: leadIds.length
+          })
+        }).then(r => r.json()).then(res => {
+          console.log('Bulk assignment email response:', res);
+        }).catch((e) => console.warn('Email trigger notice:', e));
+      }
+    } catch (_) {}
+
+    if (isSupabaseConfigured) {
+      try {
+        await supabase.from('leads').update({ assigned_to: userId, updated_at: nowIso }).in('lead_code', leadIds);
+      } catch (err) {
+        console.warn('Supabase bulk reassign notice:', err);
+      }
+    }
+  };
+
   const restoreLead = async (leadId: string) => {
     const nowIso = new Date().toISOString();
     const updated = leads.map(l => l.id === leadId ? { ...l, isArchived: false, deletedAt: null, updatedAt: nowIso } : l);
@@ -510,12 +587,41 @@ export function LMSProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const bulkRestoreLeads = async (leadIds: string[]) => {
+    if (!leadIds || leadIds.length === 0) return;
+    const nowIso = new Date().toISOString();
+    const updated = leads.map(l => leadIds.includes(l.id) ? { ...l, isArchived: false, deletedAt: null, updatedAt: nowIso } : l);
+    setLeads(updated);
+
+    if (isSupabaseConfigured) {
+      try {
+        await supabase.from('leads').update({ is_archived: false, updated_at: nowIso }).in('lead_code', leadIds);
+      } catch (err) {
+        console.warn('Supabase bulk restore notice:', err);
+      }
+    }
+  };
+
   const permanentDeleteLead = async (leadId: string) => {
     const updated = leads.filter(l => l.id !== leadId);
     setLeads(updated);
 
     if (isSupabaseConfigured) {
       await supabase.from('leads').delete().eq('lead_code', leadId);
+    }
+  };
+
+  const bulkPermanentDeleteLeads = async (leadIds: string[]) => {
+    if (!leadIds || leadIds.length === 0) return;
+    const updated = leads.filter(l => !leadIds.includes(l.id));
+    setLeads(updated);
+
+    if (isSupabaseConfigured) {
+      try {
+        await supabase.from('leads').delete().in('lead_code', leadIds);
+      } catch (err) {
+        console.warn('Supabase bulk permanent delete notice:', err);
+      }
     }
   };
 
@@ -920,8 +1026,12 @@ export function LMSProvider({ children }: { children: React.ReactNode }) {
         recordActivity,
         archiveLead,
         deleteLead,
+        bulkDeleteLeads,
+        bulkReassignLeads,
         restoreLead,
+        bulkRestoreLeads,
         permanentDeleteLead,
+        bulkPermanentDeleteLeads,
         emptyRecycleBin,
         triggerCall,
         triggerWhatsApp,

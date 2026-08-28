@@ -1,8 +1,18 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useLMS } from '@/lib/store';
-import { Trash2, RotateCcw, AlertTriangle, Clock, Building } from 'lucide-react';
+import { 
+  Trash2, 
+  RotateCcw, 
+  AlertTriangle, 
+  Clock, 
+  Building,
+  CheckSquare,
+  Square,
+  MinusSquare,
+  X
+} from 'lucide-react';
 
 export function RecycleBin() {
   const {
@@ -11,9 +21,15 @@ export function RecycleBin() {
     users,
     currentUser,
     restoreLead,
+    bulkRestoreLeads,
     permanentDeleteLead,
+    bulkPermanentDeleteLeads,
     emptyRecycleBin
   } = useLMS();
+
+  const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([]);
+  const [isRestoring, setIsRestoring] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const isSalesperson = currentUser?.role === 'salesperson';
   const isAdmin = currentUser?.role === 'admin';
@@ -23,6 +39,54 @@ export function RecycleBin() {
     if (isSalesperson && l.assignedTo !== currentUser?.id) return false;
     return true;
   });
+
+  const isAllSelected = trashedLeads.length > 0 && selectedLeadIds.length === trashedLeads.length;
+  const isSomeSelected = selectedLeadIds.length > 0 && selectedLeadIds.length < trashedLeads.length;
+
+  const toggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedLeadIds([]);
+    } else {
+      setSelectedLeadIds(trashedLeads.map((l) => l.id));
+    }
+  };
+
+  const toggleSelectLead = (id: string) => {
+    setSelectedLeadIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const clearSelection = () => {
+    setSelectedLeadIds([]);
+  };
+
+  const handleBulkRestore = async () => {
+    if (selectedLeadIds.length === 0) return;
+    setIsRestoring(true);
+    try {
+      await bulkRestoreLeads(selectedLeadIds);
+      setSelectedLeadIds([]);
+    } catch (err) {
+      console.error('Error restoring leads:', err);
+    } finally {
+      setIsRestoring(false);
+    }
+  };
+
+  const handleBulkPermanentDelete = async () => {
+    if (selectedLeadIds.length === 0) return;
+    if (!confirm(`Permanently delete ${selectedLeadIds.length} selected leads? This CANNOT be undone.`)) return;
+    setIsDeleting(true);
+    try {
+      await bulkPermanentDeleteLeads(selectedLeadIds);
+      setSelectedLeadIds([]);
+    } catch (err) {
+      console.error('Error permanently deleting leads:', err);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const getDaysRemaining = (deletedAt?: string | null) => {
     if (!deletedAt) return 15;
@@ -34,7 +98,7 @@ export function RecycleBin() {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 relative pb-16">
       {/* Header Banner */}
       <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -49,19 +113,46 @@ export function RecycleBin() {
           </p>
         </div>
 
-        {trashedLeads.length > 0 && isAdmin && (
-          <button
-            onClick={() => {
-              if (confirm('Are you sure you want to permanently delete ALL leads in the Recycle Bin? This action cannot be undone.')) {
-                emptyRecycleBin();
-              }
-            }}
-            className="inline-flex items-center gap-1.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-xs transition-all cursor-pointer whitespace-nowrap self-end sm:self-auto"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-            <span>Empty Recycle Bin ({trashedLeads.length})</span>
-          </button>
-        )}
+        <div className="flex items-center gap-2 flex-wrap self-end sm:self-auto">
+          {trashedLeads.length > 0 && (
+            <button
+              type="button"
+              onClick={toggleSelectAll}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200/80 px-3 py-2 rounded-xl transition-colors cursor-pointer"
+            >
+              {isAllSelected ? (
+                <>
+                  <CheckSquare className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Deselect All</span>
+                </>
+              ) : isSomeSelected ? (
+                <>
+                  <MinusSquare className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Select All ({trashedLeads.length})</span>
+                </>
+              ) : (
+                <>
+                  <Square className="w-3.5 h-3.5" />
+                  <span>Select All ({trashedLeads.length})</span>
+                </>
+              )}
+            </button>
+          )}
+
+          {trashedLeads.length > 0 && isAdmin && (
+            <button
+              onClick={() => {
+                if (confirm('Are you sure you want to permanently delete ALL leads in the Recycle Bin? This action cannot be undone.')) {
+                  emptyRecycleBin();
+                }
+              }}
+              className="inline-flex items-center gap-1.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-xs transition-all cursor-pointer whitespace-nowrap"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Empty Bin ({trashedLeads.length})</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Trashed Leads List */}
@@ -78,6 +169,7 @@ export function RecycleBin() {
       ) : (
         <div className="space-y-3">
           {trashedLeads.map((lead) => {
+            const isSelected = selectedLeadIds.includes(lead.id);
             const project = projects.find((p) => p.id === lead.projectId);
             const assignee = users.find((u) => u.id === lead.assignedTo);
             const daysRemaining = getDaysRemaining(lead.deletedAt);
@@ -85,9 +177,28 @@ export function RecycleBin() {
             return (
               <div
                 key={lead.id}
-                className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all"
+                className={`bg-white border rounded-2xl p-4 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all ${
+                  isSelected ? 'border-blue-500 bg-blue-50/20 ring-2 ring-blue-500/20' : 'border-slate-200'
+                }`}
               >
                 <div className="flex items-start gap-3.5">
+                  {/* Checkbox */}
+                  <button
+                    type="button"
+                    onClick={() => toggleSelectLead(lead.id)}
+                    className={`mt-1 w-6 h-6 rounded-lg flex items-center justify-center transition-all cursor-pointer shrink-0 ${
+                      isSelected
+                        ? 'bg-blue-600 text-white'
+                        : 'border border-slate-300 bg-slate-50 hover:border-slate-400'
+                    }`}
+                  >
+                    {isSelected ? (
+                      <CheckSquare className="w-4 h-4" />
+                    ) : (
+                      <div className="w-3.5 h-3.5" />
+                    )}
+                  </button>
+
                   <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-500 font-bold text-xs flex items-center justify-center shrink-0">
                     <Trash2 className="w-4 h-4 text-rose-500" />
                   </div>
@@ -120,7 +231,7 @@ export function RecycleBin() {
                       className="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-xs transition-all cursor-pointer"
                     >
                       <RotateCcw className="w-3.5 h-3.5" />
-                      <span>Restore Lead</span>
+                      <span>Restore</span>
                     </button>
                     {isAdmin && (
                       <button
@@ -140,6 +251,66 @@ export function RecycleBin() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* FLOATING BULK DOCK IN RECYCLE BIN */}
+      {selectedLeadIds.length > 0 && (
+        <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-40 w-[94%] max-w-lg md:max-w-xl animate-in slide-in-from-bottom-5 duration-200">
+          <div className="bg-slate-900/95 text-white backdrop-blur-md border border-slate-800 shadow-2xl rounded-2xl p-2.5 sm:px-4 sm:py-3 flex items-center justify-between gap-2 sm:gap-3">
+            {/* Left Count */}
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="bg-blue-600 text-white text-xs font-bold px-2.5 py-1 rounded-full shrink-0 shadow-xs">
+                {selectedLeadIds.length}
+              </span>
+              <div className="hidden sm:block min-w-0">
+                <p className="text-xs font-bold text-slate-200 truncate">
+                  {selectedLeadIds.length === 1 ? '1 lead selected' : `${selectedLeadIds.length} leads selected`}
+                </p>
+                <button
+                  type="button"
+                  onClick={clearSelection}
+                  className="text-[10px] text-slate-400 hover:text-slate-200 underline cursor-pointer"
+                >
+                  Clear selection
+                </button>
+              </div>
+            </div>
+
+            {/* Right Actions */}
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <button
+                type="button"
+                onClick={handleBulkRestore}
+                disabled={isRestoring}
+                className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3 py-2 rounded-xl shadow-xs transition-all cursor-pointer disabled:opacity-50"
+              >
+                <RotateCcw className="w-4 h-4" />
+                <span>{isRestoring ? 'Restoring...' : 'Restore Selected'}</span>
+              </button>
+
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={handleBulkPermanentDelete}
+                  disabled={isDeleting}
+                  className="flex items-center gap-1.5 bg-rose-600/90 hover:bg-rose-600 text-white text-xs font-bold px-3 py-2 rounded-xl shadow-xs transition-all cursor-pointer disabled:opacity-50"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span>{isDeleting ? 'Deleting...' : 'Delete Forever'}</span>
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={clearSelection}
+                className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
+                title="Cancel selection"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
